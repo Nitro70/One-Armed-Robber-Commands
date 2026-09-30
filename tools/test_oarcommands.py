@@ -11,7 +11,7 @@ SCRIPTS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 def make_runtime(tmp):
     scripts = os.path.join(tmp, "OARCommands", "Scripts")
     os.makedirs(scripts, exist_ok=True)
-    for f in ("main.lua", "spawnables.lua", "progress.lua", "unlockables.lua"):
+    for f in ("main.lua", "spawnables.lua", "progress.lua", "unlockables.lua", "share.lua", "player.lua"):
         shutil.copy(os.path.join(SCRIPTS, f), os.path.join(scripts, f))
     os.environ["LOCALAPPDATA"] = tmp                  # the change log goes under tmp\OAR\Saved\SaveGames
     os.makedirs(os.path.join(tmp, "OAR", "Saved", "SaveGames"), exist_ok=True)
@@ -33,6 +33,10 @@ def make_runtime(tmp):
         end})
         function RegisterConsoleCommandHandler(name, fn) Handlers[name] = fn end
         function RegisterKeyBind(key, fn) KeyCallbacks[key] = fn end
+        Hooks = {}
+        function RegisterHook(name, fn) Hooks[name] = fn; return 1, 2 end
+        function Param(v) return { get = function() return v end } end          -- a hook parameter
+        function FStr(s) return { ToString = function() return s end } end
         function IsKeyBindRegistered(key) return false end
         function ExecuteInGameThread(fn) fn() end
         function ExecuteWithDelay(ms, fn)
@@ -49,11 +53,29 @@ def make_runtime(tmp):
         Invalid = {}
         function Invalid:IsValid() return false end
         Constructed = 0
-        function StaticConstructObject(cls, outer) Constructed = Constructed + 1; return CM end
+        OtherSummons = {}     -- Summon calls on cheat managers of other controllers: {owner, name}
+        function StaticConstructObject(cls, outer)
+            Constructed = Constructed + 1
+            if outer == PC or outer == DCC then return CM end
+            local cm = { IsValid = function() return true end }
+            function cm:Summon(name) OtherSummons[#OtherSummons + 1] = { owner = outer, name = name } end
+            return cm
+        end
         PC = { CheatManager = CM, CheatClass = CM }
         function PC:IsValid() return true end
         function PC:IsLocalController() return true end
-        function PC:IsInputKeyDown(k) assert(k.KeyName) return KeyDown end
+        KeysDown = {}          -- per-key override of KeyDown
+        function PC:IsInputKeyDown(k)
+            assert(k.KeyName)
+            if KeysDown[k.KeyName] ~= nil then return KeysDown[k.KeyName] end
+            return KeyDown
+        end
+        Authority = true       -- false: this game is a guest in someone else's lobby
+        function PC:HasAuthority() return Authority end
+        function PC:GetAddress() return 42 end
+        Sent, Messages = {}, {}  -- ServerExecRPC calls; ClientMessage texts
+        function PC:ServerExecRPC(msg) Sent[#Sent + 1] = msg end
+        function PC:ClientMessage(text) Messages[#Messages + 1] = text; if Hooks["/Script/Engine.PlayerController:ClientMessage"] then Hooks["/Script/Engine.PlayerController:ClientMessage"](Param(PC), Param(FStr(text))) end end
         function PC:WasInputKeyJustPressed(k) return false end
         function PC:EnableCheats() end
         function FindAllOf(name) return { PC } end
@@ -70,7 +92,18 @@ def make_runtime(tmp):
         CallPCs = {}          -- which controller each ExecuteConsoleCommand ran on
         local KSL = {}
         function KSL:IsValid() return true end
-        function KSL:ExecuteConsoleCommand(world, cmd, pc) Calls[#Calls + 1] = cmd; CallPCs[#CallPCs + 1] = pc end
+        HandlerResults = {}   -- what a UE4SS console handler answered when the engine ran a command
+        function KSL:ExecuteConsoleCommand(world, cmd, pc)
+            Calls[#Calls + 1] = cmd; CallPCs[#CallPCs + 1] = pc
+            -- For your own player the engine's console path passes UE4SS's handlers first
+            local name = cmd:match("^(%S+)")
+            if (pc == PC or pc == DCC) and Handlers[name] and not OwnHandler(name) then
+                local params = {}
+                for w in cmd:gmatch("%S+") do params[#params + 1] = w end
+                table.remove(params, 1)
+                HandlerResults[#HandlerResults + 1] = Handlers[name](cmd, params, nil)
+            end
+        end
         -- line trace for dupe
         LookTarget = nil      -- actor the fake trace hits
         TraceArgs = nil
@@ -214,14 +247,45 @@ def make_runtime(tmp):
         GoldActor = FakeActor("Goldbar_C", "BlueprintGeneratedClass",
             "BlueprintGeneratedClass /Game/BP/Items/Valuables/Goldbar.Goldbar_C")
         WallActor = FakeActor("StaticMeshActor", "Class", "Class /Script/Engine.StaticMeshActor")
-        Pawn = {}
-        function Pawn:IsValid() return true end
+        -- a character: movement component, health, revive, collision
+        function MakePawn(addr)
+            local cm = { MaxWalkSpeed = 600, MaxFlySpeed = 600, bCheatFlying = false, Mode = 1 }
+            function cm:SetMovementMode(m, c) self.Mode = m; self.MovementMode = m end
+            local pawn = { CharacterMovement = cm, Health = 100, MaxHealth = 100, ["Downed?"] = false,
+                           Collision = true, Inputs = {}, Revived = 0 }
+            function pawn:IsValid() return true end
+            function pawn:GetAddress() return addr end
+            function pawn:SetActorEnableCollision(on) self.Collision = on end
+            function pawn:AddMovementInput(dir, v, force) self.Inputs[#self.Inputs + 1] = { z = dir.Z, v = v } end
+            function pawn:ReviveClient() self.Revived = self.Revived + 1 end
+            function pawn:K2_GetActorRotation() return { Pitch = 0, Yaw = 0, Roll = 0 } end
+            function pawn:K2_TeleportTo(loc, rot) self.TeleportedTo = loc return true end
+            return pawn
+        end
+        Pawn = MakePawn(500)
         PC.Pawn = Pawn
+        -- a guest's controller as the host sees it
+        GuestPawn = MakePawn(700)
+        GuestMessages = {}
+        GuestPC = { Pawn = GuestPawn, CheatManager = Invalid, CheatClass = CM,
+                    PlayerState = { PlayerName = FStr("Friend") } }
+        function GuestPC:IsValid() return true end
+        function GuestPC:HasAuthority() return true end
+        function GuestPC:IsLocalController() return false end
+        function GuestPC:GetAddress() return 77 end
+        function GuestPC:ClientMessage(text) GuestMessages[#GuestMessages + 1] = text end
+        function GuestRequest(text)
+            Hooks["/Script/Engine.PlayerController:ServerExecRPC"](Param(GuestPC), Param(FStr(text)))
+        end
+        function HostReply(text) PC:ClientMessage(text) end
+        function LastSentId() return Sent[#Sent]:match("^oar1 (%w+) ") end
         PC.PlayerCameraManager = { IsValid = function() return true end,
             GetCameraLocation = function() return { X = 0, Y = 0, Z = 0 } end,
-            GetCameraRotation = function() return {} end }
+            GetCameraRotation = function() return { Pitch = 10, Yaw = 20, Roll = 0 } end }
         Log = {}
         Ar = { Log = function(self, msg) Log[#Log + 1] = msg end }
+        OwnHandlerNames = {}
+        function OwnHandler(name) return OwnHandlerNames[name] end
         function Console(line)
             local params = {}
             for w in line:gmatch("%S+") do params[#params + 1] = w end
@@ -432,6 +496,134 @@ def main():
     lua.execute('LP = nil; ResetProgress(); Console("bind f6 addmoney 1000"); KeyCallbacks["KEY_F6"]()')
     ok &= check("value commands work from a bind", g.PC.Cash == 1100)
     lua.execute('Console("unbind f6")')
+
+    # --- revive and noclip (solo / host)
+    lua.execute('Pawn["Downed?"] = true; Pawn.Health = 0; Log = {}; Console("revive")')
+    ok &= check("revive: full health, not downed, the game's ReviveClient ran",
+                g.Pawn.Health == 100 and g.Pawn["Downed?"] is False and g.Pawn.Revived == 1
+                and "revived" in values(g.Log))
+    lua.execute('Log = {}; Console("noclip")')
+    ok &= check("noclip on: no collision, flying, stops when keys are let go, walk speed",
+                g.Pawn.Collision is False and g.Pawn.CharacterMovement.Mode == 5
+                and g.Pawn.CharacterMovement.bCheatFlying is True and g.Pawn.CharacterMovement.MaxFlySpeed == 600)
+    frame = "/Game/BP/Player/PlayerCharacter.PlayerCharacter_C:InpAxisEvt_MoveForward_K2Node_InputAxisEvent_0"
+    ok &= check("noclip hooks the character's per-frame MoveForward event", g.Hooks[frame] is not None)
+    lua.execute('KeyDown = false')        # only the keys listed in KeysDown are held
+    lua.execute(f'KeysDown = {{ SpaceBar = true }}; Hooks["{frame}"](Param(Pawn))')
+    lua.execute(f'KeysDown = {{ LeftControl = true }}; Hooks["{frame}"](Param(Pawn))')
+    ok &= check("Space adds up input, Ctrl adds down input",
+                lua.eval("Pawn.Inputs[1].z == 1 and Pawn.Inputs[1].v == 1 and Pawn.Inputs[2].v == -1"))
+    lua.execute(f'KeysDown = {{ LeftShift = true }}; Hooks["{frame}"](Param(Pawn))')
+    ok &= check("Shift doubles the fly speed", g.Pawn.CharacterMovement.MaxFlySpeed == 1200)
+    lua.execute(f'KeysDown = {{}}; Hooks["{frame}"](Param(Pawn))')
+    ok &= check("letting go of Shift goes back to normal speed", g.Pawn.CharacterMovement.MaxFlySpeed == 600)
+    lua.execute('KeysDown = { LeftShift = true }; Console("noclip"); KeysDown = {}; KeyDown = true')
+    ok &= check("noclip off: collision back, falling, fly speed restored",
+                g.Pawn.Collision is True and g.Pawn.CharacterMovement.Mode == 3
+                and g.Pawn.CharacterMovement.bCheatFlying is False and g.Pawn.CharacterMovement.MaxFlySpeed == 600)
+
+    # --- command sharing: pure rules
+    ok &= check("sharing levels: 0 off, 1 player, 2 world, 3 all but blocked", lua.eval(r"""(function()
+        local S = require("share")
+        return not S.Allowed(0, "summon") and S.Allowed(1, "summon") and S.Allowed(1, "destroytarget")
+            and not S.Allowed(1, "slomo") and S.Allowed(2, "slomo") and not S.Allowed(2, "stat")
+            and S.Allowed(3, "stat") and not S.Allowed(3, "exit") and not S.Allowed(3, "deletecloudfiles")
+            and not S.Allowed(3, "setmoney") and not S.Allowed(3, "open")
+    end)()"""))
+    ok &= check("request format round-trips with a camera pose", lua.eval(r"""(function()
+        local S = require("share")
+        local id, line, pose = S.Decode(S.Encode("ab1", "destroytarget", { x = 1.4, y = -2, z = 3, pitch = -10.25, yaw = 90 }))
+        return id == "ab1" and line == "destroytarget" and pose.x == 1 and pose.y == -2 and pose.pitch == -10.2 and pose.yaw == 90
+    end)()"""))
+
+    # --- host side: a guest's requests
+    lua.execute('Authority = true; Log = {}; Console("commandsharing")')
+    ok &= check("commandsharing starts at 0 (off)", any("Command sharing is 0: off" in m for m in values(g.Log)))
+    lua.execute('GuestMessages = {}; GuestRequest("oar1 ab1 summon goldbar 3")')
+    ok &= check("sharing 0: the guest is told it is off", values(g.GuestMessages) == ["[OAR host] ab1 off"])
+    lua.execute('Console("commandsharing 1"); QueueDelays = true; OtherSummons = {}; GuestMessages = {}; Messages = {}')
+    lua.execute('GuestRequest("oar1 ab2 summon goldbar 3"); RunDelays(); QueueDelays = false')
+    ok &= check("sharing 1: a guest's summon runs on the guest's own cheat manager (in front of them)",
+                lua.eval('#OtherSummons == 3 and OtherSummons[1].owner == GuestPC and OtherSummons[3].name == "Goldbar_C"'))
+    ok &= check("the guest gets ok with a summary", values(g.GuestMessages)[-1].startswith("[OAR host] ab2 ok Summoning Goldbar_C x3"))
+    ok &= check("the host sees who ran what", any("Friend ran: summon goldbar 3" in m for m in values(g.Messages)))
+    lua.execute('GuestMessages = {}; GuestRequest("oar1 ab3 slomo 0.5")')
+    ok &= check("sharing 1: world commands are denied", values(g.GuestMessages)[-1].startswith("[OAR host] ab3 denied slomo"))
+    lua.execute('Console("commandsharing 2"); GuestMessages = {}; Calls = {}; CallPCs = {}; GuestRequest("oar1 ab4 slomo 0.5")')
+    ok &= check("sharing 2: slomo runs through the engine as the guest",
+                values(g.Calls) == ["slomo 0.5"] and lua.eval("CallPCs[1] == GuestPC") and values(g.GuestMessages)[-1].startswith("[OAR host] ab4 ok"))
+    lua.execute('Console("commandsharing 3"); GuestMessages = {}; Calls = {}; GuestRequest("oar1 ab5 exit"); GuestRequest("oar1 ab6 stat fps")')
+    ok &= check("sharing 3: blocked commands are refused, the rest runs",
+                values(g.GuestMessages)[0].startswith("[OAR host] ab5 denied exit") and values(g.Calls) == ["stat fps"])
+    lua.execute('GuestMessages = {}; Calls = {}; GuestRequest("oar1 ab7 setmoney 5")')
+    ok &= check("value commands never run on the host", values(g.GuestMessages)[0].startswith("[OAR host] ab7 denied") and len(g.Calls) == 0)
+
+    lua.execute("""
+        Console("commandsharing 1"); GuestMessages = {}
+        Target = { IsValid = function() return true end, GetFName = function() return { ToString = function() return "Vase_C" end } end }
+        function Target:K2_DestroyActor() self.Destroyed = true end
+        LookTarget = Target
+        GuestRequest("oar1 ab8 destroytarget @100,200,300,-5.0,45.0")
+    """)
+    ok &= check("a guest's destroytarget traces from the guest's own camera and destroys it",
+                lua.eval("Target.Destroyed == true") and values(g.GuestMessages)[-1] == "[OAR host] ab8 ok destroyed Vase_C")
+    lua.execute("""
+        Friend = { IsValid = function() return true end, PlayerState = { IsValid = function() return true end } }
+        function Friend:K2_DestroyActor() self.Destroyed = true end
+        LookTarget = Friend; GuestMessages = {}
+        GuestRequest("oar1 ab9 destroytarget @0,0,0,0.0,0.0")
+        LookTarget = nil
+    """)
+    ok &= check("destroytarget from a guest leaves players alone",
+                lua.eval("Friend.Destroyed == nil") and "player" in values(g.GuestMessages)[-1])
+    lua.execute('GuestPawn["Downed?"] = true; GuestPawn.Health = 0; GuestMessages = {}; GuestRequest("oar1 ac1 revive")')
+    ok &= check("a guest's revive revives the guest's character on the host",
+                g.GuestPawn.Health == 100 and g.GuestPawn["Downed?"] is False and g.GuestPawn.Revived == 1
+                and values(g.GuestMessages)[-1] == "[OAR host] ac1 ok revived")
+    lua.execute('GuestMessages = {}; GuestRequest("oar1 ac2 noclip on 800")')
+    ok &= check("a guest's noclip is applied to the guest's character on the host",
+                g.GuestPawn.Collision is False and g.GuestPawn.CharacterMovement.Mode == 5
+                and g.GuestPawn.CharacterMovement.MaxFlySpeed == 800)
+    lua.execute('GuestMessages = {}; GuestRequest("oar1 0 noclip on 1600")')
+    ok &= check("speed updates (id 0) apply without a reply",
+                g.GuestPawn.CharacterMovement.MaxFlySpeed == 1600 and len(g.GuestMessages) == 0)
+    lua.execute('GuestRequest("oar1 ac3 noclip off")')
+    ok &= check("and noclip off lands the guest again", g.GuestPawn.Collision is True and g.GuestPawn.CharacterMovement.Mode == 3)
+    lua.execute('Messages = {}; Hooks["/Script/Engine.PlayerController:ServerExecRPC"](Param(PC), Param(FStr("oar1 ad1 summon goldbar")))')
+    ok &= check("the host ignores requests from its own controller", len(g.Messages) == 0)
+    lua.execute('Console("commandsharing 0")')
+
+    # --- guest side
+    lua.execute('Authority = false; QueueDelays = true; Summons = {}; Sent = {}; Console("summon goldbar 2")')
+    ok &= check("guest: summon goes to the host, nothing spawns here",
+                len(g.Sent) == 1 and g.Sent[1].endswith(" summon goldbar 2") and g.Sent[1].startswith("oar1 ") and len(g.Summons) == 0)
+    lua.execute('HostReply("[OAR host] " .. LastSentId() .. " ok Summoning Goldbar_C x2"); RunDelays()')
+    ok &= check("guest: after the host's ok nothing runs here, not even after the timeout", len(g.Summons) == 0)
+    lua.execute('Console("summon goldbar 2"); HostReply("[OAR host] " .. LastSentId() .. " off"); RunDelays()')
+    ok &= check("guest: host says off, so it runs here like normal", values(g.Summons) == ["Goldbar_C", "Goldbar_C"])
+    lua.execute('Calls = {}; HandlerResults = {}; Sent = {}; handled = Console("god")')
+    ok &= check("guest: god goes to the host", g.handled is True and g.Sent[1].endswith(" god"))
+    lua.execute('HostReply("[OAR host] " .. LastSentId() .. " denied god: needs commandsharing 2 or 3")')
+    ok &= check("guest: denied, so the engine runs god here, past this mod's own handler",
+                values(g.Calls) == ["god"] and values(g.HandlerResults) == [False])
+    lua.execute('Sent = {}; Console("destroytarget")')
+    ok &= check("guest: destroytarget sends the guest's camera position and angle",
+                g.Sent[1].endswith(" destroytarget @0,0,0,10.0,20.0"))
+    lua.execute('HostReply("[OAR host] " .. LastSentId() .. " ok destroyed Vase_C")')
+    lua.execute('Pawn.Collision = true; Sent = {}; Console("noclip")')
+    ok &= check("guest: noclip asks the host first", g.Sent[1].endswith(" noclip on 600") and g.Pawn.Collision is True)
+    lua.execute('HostReply("[OAR host] " .. LastSentId() .. " ok noclip on")')
+    ok &= check("guest: after the host's ok the guest's own game flies too", g.Pawn.Collision is False)
+    lua.execute(f'Sent = {{}}; KeyDown = false; KeysDown = {{ LeftShift = true }}; Hooks["{frame}"](Param(Pawn)); KeysDown = {{}}; KeyDown = true')
+    ok &= check("guest: Shift tells the host the new speed (no reply wanted)", g.Sent[1] == "oar1 0 noclip on 1200")
+    lua.execute('Console("noclip"); HostReply("[OAR host] " .. LastSentId() .. " ok noclip off")')
+    lua.execute('Summons = {}; Sent = {}; Console("summon goldbar"); RunDelays()')
+    ok &= check("guest: the host never answers, so after the wait it runs here", values(g.Summons) == ["Goldbar_C"])
+    lua.execute('Summons = {}; Sent = {}; Console("summon goldbar"); RunDelays()')
+    ok &= check("guest: a silent host is skipped for a while, commands run here at once",
+                len(g.Sent) == 0 and values(g.Summons) == ["Goldbar_C"])
+    lua.execute('Authority = true; QueueDelays = false')
+    ok &= check("host or solo: god is left to the engine", lua.eval('Console("god")') is False)
 
     # --- restart
     lua2, _ = make_runtime(tmp)

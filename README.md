@@ -1,21 +1,24 @@
 # OAR Commands
 
 Console commands for **One-armed robber**: a `bind` that actually works, `summon <name> [count]`
-that works on any map, `dupe` for whatever you are looking at, commands that set your cash,
-level and skills and save them, and reference lists of every console command, every spawnable
-object and every Blueprint class in the game.
+that works on any map, `dupe` for whatever you are looking at, a real `noclip`, `revive`,
+commands that set your cash, level and skills and save them, **command sharing** so friends who
+also have the mod can run commands through your game when you host, and reference lists of every
+console command, every spawnable object and every Blueprint class in the game.
 
 **Download `OAR-Commands-Installer.exe` from the [Releases](../../releases) page.**
 
 > Not affiliated with or endorsed by the makers of One-armed robber. This uses
 > [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS), a third-party mod loader that runs inside the
 > game. Use cheats solo or in lobbies you host where everyone is fine with it. As a client in
-> someone else's lobby, cheats only change your own screen.
+> someone else's lobby, cheats only change your own screen, unless the host has the mod too and
+> turns on [command sharing](#command-sharing).
 
 ## Contents
 
 - [Install](#install)
 - [Commands the mod adds](#commands-the-mod-adds)
+- [Command sharing](#command-sharing)
 - [Game commands that work](#game-commands-that-work)
 - [What the installer changes](#what-the-installer-changes)
 - [Reference lists](#reference-lists)
@@ -67,6 +70,10 @@ Notes:
 | `setxp <amount>` | Set your XP within the current level (below what it needs to level up) |
 | `maxskills` | Every skill owned and researched to its top tier |
 | `unlockall` | Every weapon, weapon mod, tool and armor that costs cash |
+| `noclip` | Fly through walls: WASD, Space up, Ctrl down, Shift twice as fast; again to land |
+| `revive` | Get back up with full health |
+| `commandsharing [0-3]` | Host: let guests with the mod run commands through your game (see [Command sharing](#command-sharing)) |
+| `host <command>` | Guest: send any command to the host (for sharing level 3) |
 
 ### bind
 
@@ -150,6 +157,100 @@ same command takes you back. Binds also follow you into the debug camera, so a k
 `teleport` moves your character to what your character is aiming at, not to the debug camera, so
 it cannot bring you to where the free camera is.
 
+### noclip
+
+- `noclip` turns it on, `noclip` again lands you.
+- **Controls:**
+  - WASD moves forward, back, left and right, the game's own movement.
+  - Space goes up, Ctrl goes down.
+  - Hold Shift to go twice as fast.
+  - Let go of everything and you stop dead instead of drifting.
+- **What it does:** collision off, the engine's flying movement, and your walking speed as the
+  normal speed. The game has no up or down input of its own, so the mod adds Space and Ctrl every
+  frame from a hook on your character's movement input.
+- **Game controls on the same keys:** the game's own jump, crouch and sprint still run. Jumping
+  does nothing while flying; the game's crouch may lower your camera while you hold Ctrl.
+- **Where Space and Ctrl work:** in heists. In the main menu the character Blueprint may not be
+  loaded yet; noclip then still works with WASD and says so.
+- **When it ends:** dying or respawning ends it (it belongs to that body). If the game ends
+  flying some other way, typing `noclip` turns it back on.
+- **In multiplayer:**
+  - When you host, everyone sees you fly.
+  - As a guest with [command sharing](#command-sharing) on at the host, the host flies your
+    character too, including the Shift speed, so it syncs.
+  - As a guest without sharing, the host pulls you back, like the built-in `ghost`.
+
+### revive
+
+- `revive` does what the game does when a teammate finishes reviving you: health back to full,
+  no longer downed, and your camera colour and look limits restored.
+- If you were not downed it just refills your health.
+- It has to run on the host (the host decides who is downed): it does when you host or play solo,
+  and as a guest it goes through [command sharing](#command-sharing).
+
+## Command sharing
+
+When you host and your friends also have OAR Commands, you can let them run commands through your
+game, where they actually take effect for everyone. It is off every time the game starts.
+
+```
+commandsharing 1
+```
+
+| Level | What guests can run through the host |
+|---|---|
+| `0` | Nothing (off). This is the setting after every game start. |
+| `1` | Player commands: `summon`, `spawn`, `summonstop`, `dupe`, `revive`, `noclip`, `god`, `ghost`, `fly`, `walk`, `teleport`, `destroytarget` |
+| `2` | Level 1 plus world commands: `destroyall`, `slomo`, `playersonly`, `changesize` |
+| `3` | Any console command except the block list below (guests use `host <command>` for commands the mod does not know) |
+
+`commandsharing` with no number shows the current level. Only the host's setting counts.
+
+**Always blocked**, at every level:
+
+- **Anything that would close, move or cut off your game:** `exit`, `quit`, `open`, `travel`,
+  `servertravel`, `disconnect`, `reconnect`, `switchlevel`, `restartlevel`, `streammap`,
+  `demoplay`, `demorec`.
+- **Anything that touches your files or crashes the game:** `exec`, `deletecloudfiles`,
+  `DoubleFreeFinderCrash`, `MallocFrameProfiler`, `purchase`, `debug`.
+- **The mod's commands that stay on each player's own game and save:** `setmoney`, `addmoney`,
+  `setlevel`, `setxp`, `maxskills`, `unlockall`, `bind`, `unbind`, `unbindall`,
+  `commandsharing`, `host`.
+
+**What runs where.** A guest's command runs as that guest, on the host's game:
+
+- `summon` and `spawn` put things in front of the **guest**.
+- `god`, `ghost`, `walk`, `revive` and `noclip` act on the **guest's** character.
+- `destroytarget`, `dupe` and `teleport` act on what the **guest** is looking at: the guest's mod
+  sends its exact camera position and angle, and the host's mod aims from there.
+  `destroytarget` from a guest leaves other players alone.
+- The host's own commands are unchanged: when you (the host) type `destroytarget`, it destroys
+  what **you** are looking at.
+
+The host's console shows every guest command, for example `[OAR] Friend ran: summon goldbar 5`.
+The guest sees the host's answer, for example `[OAR host] ... ok Summoning Goldbar_C x5`.
+
+**Failsafe.** A command only goes to the host when you are a guest. It runs on your own game
+exactly as it would without this feature when:
+
+- you play solo or you are the host;
+- the host has sharing at `0`, or at a level that does not include the command;
+- the host does not have the mod, or does not answer within 1.5 seconds. After a host stays
+  silent, commands run on your game straight away for the next minute.
+
+If sharing ever stops working, commands simply behave as they did before it existed.
+
+**How it works.**
+
+- **Guest to host:** the engine has a client-to-server call, `PlayerController.ServerExecRPC`, that
+  this shipping build accepts and then ignores (its check always passes and its body is empty). A
+  guest's mod sends `oar1 <id> <command>` through it, and only the host's mod reads it.
+- **Host to guest:** the reply comes back with `ClientMessage`, which also prints it in the guest's
+  console.
+- **The full design:** [docs/design/2026-09-30-command-sharing-noclip-revive.md](docs/design/2026-09-30-command-sharing-noclip-revive.md).
+
+Both players need OAR Commands installed. Guests without the mod are not affected at all.
+
 ## Game commands that work
 
 Short list; the full, verified list is in
@@ -169,7 +270,8 @@ Short list; the full, verified list is in
 | `stat fps` | FPS counter |
 | `open <map>` | Load a map in solo play; the map names are in the command list |
 
-Cheats only really apply when you host or play solo. As a client the server overrides you.
+Cheats only really apply when you host or play solo. As a client the server overrides you,
+unless the host shares commands with you (see [Command sharing](#command-sharing)).
 
 `fly` prints "You feel much lighter" but barely changes anything in this game. It switches your
 character to the engine's flying movement, which only turns gravity off. One-armed robber moves
@@ -192,9 +294,13 @@ Everything goes into `OAR\Binaries\Win64`. The game's own exe and pak files are 
 
 - **UE4SS 3.0.1**: `dwmapi.dll`, `UE4SS.dll`, `UE4SS-settings.ini`, `UE4SS-LICENSE.txt` and the
   stock `Mods` folder.
-- **`Mods\OARCommands`**: this project's mod (`main.lua`; `progress.lua`, the value commands;
-  `spawnables.lua`, the name table for `summon`; `unlockables.lua`, the skills and cash items for
-  `maxskills` and `unlockall`).
+- **`Mods\OARCommands`**: this project's mod:
+  - `main.lua`;
+  - `share.lua`, command sharing;
+  - `player.lua`, `noclip` and `revive`;
+  - `progress.lua`, the value commands;
+  - `spawnables.lua`, the name table for `summon`;
+  - `unlockables.lua`, the skills and cash items for `maxskills` and `unlockall`.
 - **Console key stays on ~**: stock UE4SS's `ConsoleEnablerMod` moves the console to F10. The
   installed copy keeps it on the tilde key.
 - **`mods.txt` without a byte-order mark**: the stock UE4SS 3.0.1 `mods.txt` starts with an

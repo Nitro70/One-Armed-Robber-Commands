@@ -1,6 +1,7 @@
 # Command sharing, noclip and revive
 
-Design for OAR Commands 1.2.0. Status: waiting for approval.
+Design for OAR Commands 1.2.0. Status: approved 2026-09-30 and built in 1.2.0; the multiplayer
+parts are not yet tested with two players.
 
 ## Goals
 

@@ -16,6 +16,9 @@
         dupe [count]              summon copies of whatever is under your crosshair, e.g.  dupe 5
         setmoney, addmoney, setlevel, setxp, maxskills, unlockall
                                   change your progress and save it (see progress.lua)
+        noclip, revive            fly through walls / get back up (see player.lua)
+        commandsharing [0-3]      host: let guests with this mod run commands through your game
+        host <command>            guest: send a command to the host (see share.lua)
 
     Binds are saved in binds.txt next to this mod's Scripts folder and come back after a restart.
     A bind only fires when the key actually reached the game (not while you type in the console
@@ -114,6 +117,21 @@ local function Command(name, fn)
     OwnCommands[name] = fn
     RegisterConsoleCommandHandler(name, fn)
 end
+
+-- Your own controller. In the debug camera the local player drives the camera's controller and
+-- your real one is parked in its OriginalControllerRef.
+local function Robber()
+    local pc = LocalPlayerController()
+    if pc and pc:GetClass():GetFName():ToString() == "DebugCameraController" then
+        pc = pc.OriginalControllerRef
+    end
+    if pc and pc:IsValid() then return pc end
+    return nil
+end
+
+-- Shared with the other files (share.lua, player.lua); more is added further down.
+local api = { Command = Command, Say = Say, LocalPlayerController = LocalPlayerController, Robber = Robber,
+              OwnCommands = OwnCommands }
 
 -- Run a bound command line. "a | b" runs both; our own commands are called directly, anything
 -- else goes through the normal console path (KismetSystemLibrary::ExecuteConsoleCommand).
@@ -287,16 +305,18 @@ NotifyOnNewObject("/Script/Engine.DebugCameraController", function(dcc)
     end)
 end)
 
-local function SpawnBatch(entry, count, Ar)
-    local pc = LocalPlayerController()
-    if not pc then Say(Ar, "No local player yet") return end
-    if not CheatManagerFor(pc) then Say(Ar, "No cheat manager, cannot summon") return end
+-- target: the controller to summon for (a guest's, on the host); default your own.
+local function SpawnBatch(entry, count, Ar, target)
+    local pc = target or LocalPlayerController()
+    if not pc then Say(Ar, "No local player yet") return "no local player" end
+    if not CheatManagerFor(pc) then Say(Ar, "No cheat manager, cannot summon") return "no cheat manager" end
     if entry.path then LoadAsset(entry.path) end
     local generation, done = StopGeneration, 0
     local function step()
         if generation ~= StopGeneration then return end
-        local p = LocalPlayerController()
-        local cm = p and CheatManagerFor(p)
+        local p = target or LocalPlayerController()
+        if not (p and p:IsValid()) then return end
+        local cm = CheatManagerFor(p)
         if not cm then return end
         cm:Summon(entry.name)
         done = done + 1
@@ -305,28 +325,45 @@ local function SpawnBatch(entry, count, Ar)
         end
     end
     step()
-    Say(Ar, string.format("Summoning %s x%d%s", entry.label or entry.name, count,
-        count > 1 and string.format(" (%.2fs apart, summonstop to cancel)", SPAWN_DELAY_MS / 1000) or ""))
+    local summary = string.format("Summoning %s x%d%s", entry.label or entry.name, count,
+        count > 1 and string.format(" (%.2fs apart, summonstop to cancel)", SPAWN_DELAY_MS / 1000) or "")
+    Say(Ar, summary)
+    return summary
+end
+
+local function DoSummon(pc, words, Ar)
+    if #words == 0 then
+        Say(Ar, "Usage: summon <thing> [count]   e.g.  summon goldbar 10")
+        return "usage: summon <thing> [count]"
+    end
+    local entry, err = ResolveSpawnable(words[1])
+    if not entry then Say(Ar, err) return err end
+    local count = math.floor(tonumber(words[2] or "1") or 1)
+    count = math.max(1, math.min(count, SPAWN_MAX))
+    return SpawnBatch(entry, count, Ar, pc)
+end
+
+local function StopSummons()
+    StopGeneration = StopGeneration + 1
+    return "Stopped all summon batches"
 end
 
 local function SummonHandler(FullCommand, Parameters, Ar)
-    if #Parameters == 0 then
-        Say(Ar, "Usage: summon <thing> [count]   e.g.  summon goldbar 10")
-        return true
+    if #Parameters > 0 then
+        local entry, err = ResolveSpawnable(Parameters[1])
+        if not entry then Say(Ar, err) return true end
+        -- As a guest the host summons it, in front of you; see share.lua
+        if api.Share.Relay(FullCommand, Ar, function() DoSummon(nil, Parameters, nil) end) then return true end
     end
-    local entry, err = ResolveSpawnable(Parameters[1])
-    if not entry then Say(Ar, err) return true end
-    local count = math.floor(tonumber(Parameters[2] or "1") or 1)
-    count = math.max(1, math.min(count, SPAWN_MAX))
-    SpawnBatch(entry, count, Ar)
+    DoSummon(nil, Parameters, Ar)
     return true
 end
 
 Command("summon", SummonHandler)
 Command("spawn", SummonHandler)
 Command("summonstop", function(FullCommand, Parameters, Ar)
-    StopGeneration = StopGeneration + 1
-    Say(Ar, "Stopped all summon batches")
+    if api.Share.Relay(FullCommand, Ar, StopSummons) then return true end
+    Say(Ar, StopSummons())
     return true
 end)
 
@@ -338,13 +375,21 @@ local TRACE_DISTANCE = 50000.0
 local TRACE_VISIBILITY = 0            -- ETraceTypeQuery::TraceTypeQuery1
 local DRAW_DEBUG_NONE = 0
 
-local function LookedAtActor(pc)
-    local cam = pc.PlayerCameraManager
-    if not cam:IsValid() then return nil end
+-- What pc is looking at. pose (from a guest's request): trace from that camera position and
+-- angle instead of pc's own camera. Returns the actor and the hit result.
+local function LookedAtActor(pc, pose)
     local kml = StaticFindObject("/Script/Engine.Default__KismetMathLibrary")
     local ksl = StaticFindObject("/Script/Engine.Default__KismetSystemLibrary")
-    local start = cam:GetCameraLocation()
-    local reach = kml:Multiply_VectorFloat(kml:GetForwardVector(cam:GetCameraRotation()), TRACE_DISTANCE)
+    local start, rot
+    if pose then
+        start = { X = pose.x, Y = pose.y, Z = pose.z }
+        rot = { Pitch = pose.pitch, Yaw = pose.yaw, Roll = 0.0 }
+    else
+        local cam = pc.PlayerCameraManager
+        if not cam:IsValid() then return nil end
+        start, rot = cam:GetCameraLocation(), cam:GetCameraRotation()
+    end
+    local reach = kml:Multiply_VectorFloat(kml:GetForwardVector(rot), TRACE_DISTANCE)
     local finish = kml:Add_VectorVector(start, reach)
     local pawn = pc.Pawn
     local ignore = {}
@@ -355,27 +400,77 @@ local function LookedAtActor(pc)
         ignore, DRAW_DEBUG_NONE, hit, true, color, color, 0.0)
     if not wasHit then return nil end
     local ok, actor = pcall(function() return hit.Actor:Get() end)
-    if ok and actor and actor:IsValid() then return actor end
+    if ok and actor and actor:IsValid() then return actor, hit end
     return nil
 end
 
-Command("dupe", function(FullCommand, Parameters, Ar)
-    local pc = LocalPlayerController()
-    if not pc then Say(Ar, "No local player yet") return true end
-    local actor = LookedAtActor(pc)
-    if not actor then Say(Ar, "Not looking at anything") return true end
+local function DoDupe(pc, words, Ar, pose)
+    pc = pc or LocalPlayerController()
+    if not pc then Say(Ar, "No local player yet") return "no local player" end
+    local actor = LookedAtActor(pc, pose)
+    if not actor then Say(Ar, "Not looking at anything") return "not looking at anything" end
     local cls = actor:GetClass()
     local className = cls:GetFName():ToString()
     if cls:GetClass():GetFName():ToString() ~= "BlueprintGeneratedClass" then
-        Say(Ar, string.format("That is %s, a plain part of the map; dupe only copies game objects", className))
-        return true
+        local msg = string.format("That is %s, a plain part of the map; dupe only copies game objects", className)
+        Say(Ar, msg)
+        return msg
     end
     local path = cls:GetFullName():match("%s(%S+)$") or className   -- "BlueprintGeneratedClass /Game/..X_C"
-    local count = math.floor(tonumber(Parameters[1] or "1") or 1)
+    local count = math.floor(tonumber(words[1] or "1") or 1)
     count = math.max(1, math.min(count, SPAWN_MAX))
-    SpawnBatch({ name = path, label = className }, count, Ar)
+    return SpawnBatch({ name = path, label = className }, count, Ar, pc)
+end
+
+Command("dupe", function(FullCommand, Parameters, Ar)
+    -- As a guest the host copies what you are looking at (your camera goes along); see share.lua
+    if api.Share.Relay(FullCommand, Ar, function() DoDupe(nil, Parameters, nil) end, { aim = true }) then
+        return true
+    end
+    DoDupe(nil, Parameters, Ar)
     return true
 end)
+
+local function IsPlayer(actor)
+    local ok, player = pcall(function()
+        local ps = actor.PlayerState
+        return ps ~= nil and type(ps) ~= "number" and ps:IsValid()
+    end)
+    return ok and player
+end
+
+-- Host, for a guest: the engine's DestroyTarget, but aimed from the guest's camera. Players are left alone.
+local function DestroyLookedAt(pc, pose)
+    local actor = LookedAtActor(pc, pose)
+    if not actor then return "nothing there" end
+    if IsPlayer(actor) then return "that is a player; left alone" end
+    local name = actor:GetFName():ToString()
+    pcall(function()                              -- like the engine: an AI's controller goes too
+        local c = actor.Controller
+        if c and c:IsValid() then c:K2_DestroyActor() end
+    end)
+    actor:K2_DestroyActor()
+    return "destroyed " .. name
+end
+
+-- Host, for a guest: the engine's Teleport (a little off the surface you look at), aimed from the guest's camera.
+local function TeleportToLookedAt(pc, pose)
+    local pawn = pc.Pawn
+    if not pawn:IsValid() then return "no character" end
+    local actor, hit = LookedAtActor(pc, pose)
+    if not actor then return "nothing there" end
+    local n = hit.ImpactNormal or hit.Normal or { X = 0, Y = 0, Z = 0 }
+    local loc = { X = hit.Location.X + n.X * 4, Y = hit.Location.Y + n.Y * 4, Z = hit.Location.Z + n.Z * 4 }
+    pawn:K2_TeleportTo(loc, pawn:K2_GetActorRotation())
+    return "teleported"
+end
+
+api.CheatManagerFor, api.DoSummon, api.DoDupe, api.StopSummons = CheatManagerFor, DoSummon, DoDupe, StopSummons
+api.DestroyLookedAt, api.TeleportToLookedAt = DestroyLookedAt, TeleportToLookedAt
+
+-- commandsharing, host, and the guest side of the engine cheats; then revive and noclip
+require("share").Init(api)
+require("player").Init(api)
 
 -- setmoney, addmoney, setlevel, setxp, maxskills, unlockall
 require("progress").Register({ Command = Command, Say = Say, LocalPlayerController = LocalPlayerController })

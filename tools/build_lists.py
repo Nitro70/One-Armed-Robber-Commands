@@ -145,6 +145,9 @@ QUICK_START = [
     ("bind x destroytarget", "put any command on a key (mod; the game's own SetBind is dead)"),
     ("setmoney 5000000", "set your cash and save it (mod; also addmoney, setlevel, setxp)"),
     ("maxskills / unlockall", "every skill at top tier / every cash-bought weapon, mod, tool, armor (mod)"),
+    ("noclip", "fly through walls: WASD, Space up, Ctrl down, Shift faster; again to land (mod)"),
+    ("revive", "get back up with full health (mod)"),
+    ("commandsharing 1", "host: guests with the mod can run commands through your game (mod; 0-3)"),
     ("DestroyTarget", "delete what you are looking at"),
     ("DestroyAll NPC_Police_base_C", "delete every cop on the map"),
     ("PlayersOnly", "freeze all AI and physics (again to unfreeze)"),
@@ -253,7 +256,8 @@ def build_commands(objs, cvars, maps, engine_words):
     w("  * Cheats need a cheat manager. The OARCommands install creates one for you; without it,")
     w("    type  EnableCheats  (works in solo play only).")
     w("  * The mod adds: bind / unbind / unbindall, summon <name> [count], summonstop, dupe [count],")
-    w("    setmoney / addmoney / setlevel / setxp / maxskills / unlockall. See the project README.")
+    w("    setmoney / addmoney / setlevel / setxp / maxskills / unlockall, noclip, revive,")
+    w("    commandsharing / host. See the project README.")
     w("")
     w("QUICK START")
     w("-" * 78)

@@ -17,7 +17,8 @@ HOW 'WORKS' WAS DECIDED
   * Cheats need a cheat manager. The OARCommands install creates one for you; without it,
     type  EnableCheats  (works in solo play only).
   * The mod adds: bind / unbind / unbindall, summon <name> [count], summonstop, dupe [count],
-    setmoney / addmoney / setlevel / setxp / maxskills / unlockall. See the project README.
+    setmoney / addmoney / setlevel / setxp / maxskills / unlockall, noclip, revive,
+    commandsharing / host. See the project README.
 
 QUICK START
 ------------------------------------------------------------------------------
@@ -30,6 +31,9 @@ QUICK START
   bind x destroytarget             put any command on a key (mod; the game's own SetBind is dead)
   setmoney 5000000                 set your cash and save it (mod; also addmoney, setlevel, setxp)
   maxskills / unlockall            every skill at top tier / every cash-bought weapon, mod, tool, armor (mod)
+  noclip                           fly through walls: WASD, Space up, Ctrl down, Shift faster; again to land (mod)
+  revive                           get back up with full health (mod)
+  commandsharing 1                 host: guests with the mod can run commands through your game (mod; 0-3)
   DestroyTarget                    delete what you are looking at
   DestroyAll NPC_Police_base_C     delete every cop on the map
   PlayersOnly                      freeze all AI and physics (again to unfreeze)
