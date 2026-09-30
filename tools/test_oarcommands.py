@@ -13,7 +13,7 @@ def make_runtime(tmp):
     os.makedirs(scripts, exist_ok=True)
     for f in ("main.lua", "spawnables.lua", "progress.lua", "unlockables.lua"):
         shutil.copy(os.path.join(SCRIPTS, f), os.path.join(scripts, f))
-    os.environ["LOCALAPPDATA"] = tmp                  # save backups go under tmp\OAR\Saved\SaveGames
+    os.environ["LOCALAPPDATA"] = tmp                  # the change log goes under tmp\OAR\Saved\SaveGames
     os.makedirs(os.path.join(tmp, "OAR", "Saved", "SaveGames"), exist_ok=True)
     lua = LuaRuntime(unpack_returned_tuples=True)
     lua.execute(r'''
@@ -97,31 +97,42 @@ def make_runtime(tmp):
             return Classes[path]
         end
         function LoadAsset(p) Loads[#Loads + 1] = p; Loaded[p] = true end
-        SteamUser = { GetSteamID_Pure = function(self) return { id = 1 } end }
-        SteamUtil = { BreakSteamID = function(self, id) return "7650000000000001" end }
         function StaticFindObject(path)
             if path:find("KismetMathLibrary", 1, true) then return KML end
-            if path == "/Script/SteamCore.Default__User" then return SteamUser end
-            if path == "/Script/SteamCore.Default__SteamUtilities" then return SteamUtil end
             if path:sub(1, 6) == "/Game/" then
                 if Loaded[path] then return FakeClass(path) end
                 return Invalid
             end
             return KSL
         end
-        -- UE4SS TArray: 1-based, grows when indexed one past the end, has GetArrayNum and Empty
-        function MakeArray(items)
+        -- UE4SS 3.0.1 TArray, including its off-by-one (LuaTArray.cpp prepare_to_handle): indexing
+        -- only grows the array when the 0-based index is ABOVE Num (or the array is empty), by
+        -- index - Num elements (1 when empty), and then touches that index anyway. So only
+        -- "empty array, index 1" grows safely; anything else past the end is an out-of-bounds access.
+        OutOfBounds = 0
+        function MakeArray(items, newElement)
             local data = items or {}
+            local function touch(k)
+                local i, num = k - 1, #data
+                if i > num or num == 0 then
+                    local count = (i == 0 or num == 0) and 1 or (i - num)
+                    for _ = 1, count do data[#data + 1] = newElement and newElement() or {} end
+                end
+                if i >= #data then OutOfBounds = OutOfBounds + 1 return false end
+                return true
+            end
             return setmetatable({ Data = data }, {
                 __index = function(t, k)
                     if k == "GetArrayNum" then return function() return #data end end
                     if k == "Empty" then return function() for i = #data, 1, -1 do data[i] = nil end end end
                     if type(k) == "number" then
-                        if k == #data + 1 then data[k] = {} end
+                        if not touch(k) then return {} end        -- past the end: memory that isn't the array's
                         return data[k]
                     end
                 end,
-                __newindex = function(t, k, v) data[k] = v end,
+                __newindex = function(t, k, v)
+                    if touch(k) then data[k] = v end
+                end,
             })
         end
         local function Named(s) return { ToString = function() return s end } end
@@ -129,6 +140,33 @@ def make_runtime(tmp):
         GameCalls = {}        -- SaveCash, LoadLevel... in call order
         for _, fn in ipairs({ "SaveCash", "LoadCash", "SaveLevel", "LoadLevel", "SaveInventoryItems" }) do
             PC[fn] = function(self) GameCalls[#GameCalls + 1] = fn end
+        end
+        -- The game's own Blueprint functions, which append with Kismet's Array_Add (always safe)
+        function PC:AddInventoryItem(item, out)
+            assert(type(out) == "table", "UE4SS needs a table for out parameters")
+            local d = self.ItemInventory.Data
+            d[#d + 1] = item
+            out.Index = #d - 1
+            GameCalls[#GameCalls + 1] = "AddInventoryItem"
+            GameCalls[#GameCalls + 1] = "SaveInventoryItems"
+        end
+        function PC:ProgressSkills(xp)
+            local U = require("unlockables")
+            local F, P = U.SkillFields, U.ProgressFields
+            local research, owned = self.ResearchingSkills.Data, self.UnlockedSkills.Data
+            for i = #research, 1, -1 do
+                local r = research[i]
+                r[P.progress] = (r[P.progress] or 0) + xp / #research
+                if r[P.progress] >= 150 then                           -- RequiredProgress is 150..450
+                    local done = false
+                    for _, e in ipairs(owned) do
+                        if e[F.skill] == r[P.skill][F.skill] then e[F.tier] = r[P.skill][F.tier]; done = true end
+                    end
+                    if not done then owned[#owned + 1] = { [F.skill] = r[P.skill][F.skill], [F.tier] = r[P.skill][F.tier] } end
+                    table.remove(research, i)
+                end
+            end
+            GameCalls[#GameCalls + 1] = "ProgressSkills"
         end
         function PC:GetClass() return ClassNamed("RobberController_C") end
         function DCC:GetClass() return ClassNamed("DebugCameraController") end
@@ -272,10 +310,9 @@ def main():
     lua.execute('LP = nil; Console("unbind g")')
 
     # --- value commands
-    saves = os.path.join(tmp, "OAR", "Saved", "SaveGames")
-    for slot in ("Cash", "Level", "InventoryItems"):
-        with open(os.path.join(saves, f"7650000000000001{slot}.sav"), "wb") as f:
-            f.write(b"GVAS-" + slot.encode())
+    changes = os.path.join(tmp, "OAR", "Saved", "SaveGames", "OARCommands-changes.log")
+    def change_log():
+        return open(changes, encoding="utf-8").read() if os.path.exists(changes) else ""
     u = lua.eval('require("unlockables")')
     skills, gear = list(u.Skills.values()), list(u.Gear.values())
     ok &= check("unlockables: 17 skills, all with 3 tiers", len(skills) == 17 and all(s.tiers == 3 for s in skills))
@@ -285,10 +322,7 @@ def main():
     lua.execute('ResetProgress(); Console("setmoney 5000")')
     ok &= check("setmoney sets cash", g.PC.Cash == 5000)
     ok &= check("setmoney saves with the game's SaveCash, then reloads", values(g.GameCalls) == ["SaveCash", "LoadCash"])
-    backups = sorted(f for f in os.listdir(saves) if ".oarbackup-" in f)
-    ok &= check("first edit backs up the Cash, Level and InventoryItems saves", len(backups) == 3 and all(
-        open(os.path.join(saves, b), "rb").read() == open(os.path.join(saves, b.split(".oarbackup-")[0]), "rb").read()
-        for b in backups))
+    ok &= check("the old value goes in the change log first", "setmoney: cash 100 -> 5000" in change_log())
     lua.execute('ResetProgress(); Console("setmoney lots")')
     ok &= check("setmoney with no number changes nothing", g.PC.Cash == 100 and len(g.GameCalls) == 0
                 and any("Usage" in m for m in values(g.Log)))
@@ -302,6 +336,7 @@ def main():
     lua.execute('ResetProgress(); Console("setlevel 50")')
     ok &= check("setlevel sets the level and starts it at 0 XP", g.PC.Level == 50 and g.PC.EXP == 0)
     ok &= check("setlevel saves with SaveLevel, then reloads", values(g.GameCalls) == ["SaveLevel", "LoadLevel"])
+    ok &= check("setlevel logs the old level and XP", "setlevel: level 3 -> 50, xp 12.5 -> 0" in change_log())
     lua.execute('ResetProgress(); Console("setlevel 0")')
     ok &= check("setlevel refuses levels below 1", g.PC.Level == 3 and len(g.GameCalls) == 0)
     lua.execute('ResetProgress(); Console("setxp 99.5")')
@@ -311,19 +346,21 @@ def main():
     ok &= check("setxp refuses XP at or above the level-up amount",
                 g.PC.EXP == 12.5 and len(g.GameCalls) == 0 and any("levels up at 167 XP" in m for m in values(g.Log)))
 
-    # maxskills: one skill already owned at a broken tier, one in research
+    # maxskills: one skill already owned at a broken tier, one in research, the other 16 not owned
     lua.execute('''
         ResetProgress()
+        OutOfBounds = 0
         local U = require("unlockables")
         local F = U.SkillFields
         local first = U.Skills[1].path
         Loaded = { [first] = true }
         PC.UnlockedSkills = MakeArray({ { [F.skill] = FakeClass(first), [F.tier] = 72 } })
-        PC.ResearchingSkills = MakeArray({ { Progress = 3 } })
+        PC.ResearchingSkills = MakeArray({ { [U.ProgressFields.progress] = 3 } })
         Loads = {}
         Console("maxskills")
     ''')
-    ok &= check("maxskills: every skill owned once, at its top tier", lua.eval('''(function()
+    ok &= check("maxskills: every skill owned once, at its top tier, including ones you never bought",
+                lua.eval('''(function()
         local U, F = require("unlockables"), require("unlockables").SkillFields
         local arr = PC.UnlockedSkills.Data
         if #arr ~= #U.Skills then return false end
@@ -335,13 +372,17 @@ def main():
         for _, s in ipairs(U.Skills) do if not seen[s.path] then return false end end
         return true
     end)()'''))
+    ok &= check("maxskills never touches memory past the end of an array", g.OutOfBounds == 0)
+    ok &= check("maxskills adds skills through the game's ProgressSkills, then saves",
+                values(g.GameCalls) == ["ProgressSkills"] * 16 + ["SaveLevel", "LoadLevel"])
     ok &= check("maxskills clears the research queue", lua.eval("#PC.ResearchingSkills.Data") == 0)
     ok &= check("maxskills loads the skills it did not have", len(g.Loads) == 16)
-    ok &= check("maxskills saves with SaveLevel, then reloads", values(g.GameCalls) == ["SaveLevel", "LoadLevel"])
+    ok &= check("maxskills logs what it changed", "tier 72 -> 3" in change_log() and "added 16 skills" in change_log())
 
     # unlockall: one gear item and a coin emote already owned
     lua.execute('''
         ResetProgress()
+        OutOfBounds = 0
         local U = require("unlockables")
         local emote = "/Game/Maps/Menu/BP/Shop/Appearance/Emotes/ShopItem_Emote_Wave.ShopItem_Emote_Wave_C"
         Loaded = { [U.Gear[1].path] = true, [emote] = true }
@@ -358,15 +399,16 @@ def main():
         for _, s in ipairs(U.Gear) do if count[s.path] ~= 1 then return false end end
         return count["/Game/Maps/Menu/BP/Shop/Appearance/Emotes/ShopItem_Emote_Wave.ShopItem_Emote_Wave_C"] == 1
     end)()'''))
-    ok &= check("unlockall saves once with SaveInventoryItems", values(g.GameCalls) == ["SaveInventoryItems"])
+    ok &= check("unlockall never touches memory past the end of an array", g.OutOfBounds == 0)
+    ok &= check("unlockall adds each item with the game's AddInventoryItem (which saves)",
+                values(g.GameCalls) == ["AddInventoryItem", "SaveInventoryItems"] * (len(gear) - 1))
+    ok &= check("unlockall logs what it added", f"unlockall: added {len(gear) - 1} items" in change_log())
 
     lua.execute('ResetProgress(); LP = { PlayerController = DCC, IsValid = function() return true end }; Console("setmoney 777")')
     ok &= check("in the debug camera the edit goes to your real controller", g.PC.Cash == 777)
     lua.execute('LP = nil; ResetProgress(); Console("bind f6 addmoney 1000"); KeyCallbacks["KEY_F6"]()')
     ok &= check("value commands work from a bind", g.PC.Cash == 1100)
     lua.execute('Console("unbind f6")')
-    ok &= check("only one backup per session",
-                len([f for f in os.listdir(saves) if ".oarbackup-" in f]) == 3)
 
     # --- restart
     lua2, _ = make_runtime(tmp)

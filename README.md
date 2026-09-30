@@ -106,21 +106,27 @@ Notes:
 ### Cash, level and skills
 
 - Each command changes your own values and then saves them with the game's own save functions
-  (`SaveCash`, `SaveLevel`, `SaveInventoryItems`). Those write the one thing the game checks when
+  (`SaveCash`, `SaveLevel`, `AddInventoryItem`). Those write the one thing the game checks when
   it loads a save (that it belongs to your Steam account) and upload to Steam Cloud themselves, so
   the change sticks after a restart and on other PCs.
-- Before the first change in a session, the mod copies your `Cash`, `Level` and `InventoryItems`
-  saves next to themselves as `*.oarbackup-<date>-<time>` in
-  `%LOCALAPPDATA%\OAR\Saved\SaveGames`. The easy undo is running the command again with your old
-  value. The backups are there if something goes wrong; Steam Cloud also keeps a copy, so a
-  restored file may be replaced by the cloud one unless Steam asks which to keep.
+- Every change is written to `%LOCALAPPDATA%\OAR\Saved\SaveGames\OARCommands-changes.log` with
+  the old value (for example `setmoney: cash 1003718128 -> 24000000`), so you can undo it with the
+  same command. The saves themselves are not copied: they are named after your SteamID, which UE4SS
+  3.0.1 cannot read.
 - Cash is capped at 2,000,000,000: the game stores it as a 32-bit number, and the gap keeps a heist
   payout from overflowing it.
-- `maxskills` sets every skill to its top tier (3) and clears the research queue. Skills apply
-  when your character spawns, so they take effect from the next heist. A skill saved above its top
-  tier does nothing in the game; `maxskills` repairs that too.
-- `unlockall` adds the 254 items that are bought with cash. It loads them first, which can pause
-  the game briefly; the main menu is the best place to run it.
+- `maxskills` gives you all 17 skills at their top tier (3), including ones you never bought, and
+  clears the research queue. Skills you have are raised in place. Skills you don't have are added
+  the way the game adds a skill when its research finishes: the skill goes into the research queue
+  as finished and the game's own `ProgressSkills` moves it into your skills. Skills apply when your
+  character spawns, so they take effect from the next heist. A skill saved above its top tier does
+  nothing in the game; `maxskills` repairs that too.
+- `unlockall` adds every one of the 254 cash-bought items you don't have, each through the game's
+  own `AddInventoryItem`, which saves after every item. With many items missing that takes a few
+  seconds; the main menu is the best place to run it.
+- Anything added to a list (skills, items) goes through the game's own code. UE4SS 3.0.1 cannot
+  grow a list from Lua safely: indexing one past the end does not grow it but still writes there,
+  outside the list's memory.
 - Coins and everything bought with coins (emotes, most masks and outfits, and the maps sold for
   coins) are never touched. Those live in your Steam Inventory and cost real money.
 - `setxp` only takes amounts below what your level needs to level up. More would make the game

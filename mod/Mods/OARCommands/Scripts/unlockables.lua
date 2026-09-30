@@ -2,6 +2,7 @@
 -- nothing here has a coin price or a Steam item ID.
 return {
   SkillFields = { skill = "Skill_2_32FF49534D967B79DDAB1DA401ED363B", tier = "Tier_5_3D0C648A4B5A696BB31FBD85A8A87A11" },
+  ProgressFields = { skill = "Skill_7_6A342C02425FA26022354C88E04C6B8D", progress = "Progress_5_6F50785343D6E2B3F7B37CA5075229E1" },
   Skills = {
     { name = "Shop_skill_ArmoredFeet_C", path = "/Game/BP/Player/Skills/Breaching/Shop_skill_ArmoredFeet.Shop_skill_ArmoredFeet_C", tiers = 3 },
     { name = "Shop_Skill_CameraDodger_C", path = "/Game/BP/Player/Skills/Stealth/Shop_Skill_CameraDodger.Shop_Skill_CameraDodger_C", tiers = 3 },
