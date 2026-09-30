@@ -18,7 +18,9 @@ NEEDLES = [getpass.getuser(), os.path.expanduser("~"), REPO, os.path.basename(RE
 
 
 # UE4SS's own release DLLs carry the PDB path of UE4SS's GitHub Actions runner; that is theirs.
-ALLOWED = [("D:" + B + "a" + B + "RE-UE4SS" + B).lower().encode("ascii")]
+# The mod looks up the save folder through the LOCALAPPDATA variable: a name, not anyone's path.
+ALLOWED = [("D:" + B + "a" + B + "RE-UE4SS" + B).lower().encode("ascii"),
+           b'os.getenv("localappdata")']
 
 
 def hits(data, label):
