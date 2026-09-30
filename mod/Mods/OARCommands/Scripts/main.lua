@@ -14,6 +14,8 @@
                                   Names: goldbar, Goldbar_C, a unique start like gold, or a full path.
         summonstop                cancel summon batches that are still running
         dupe [count]              summon copies of whatever is under your crosshair, e.g.  dupe 5
+        setmoney, addmoney, setlevel, setxp, maxskills, unlockall
+                                  change your progress and save it (see progress.lua)
 
     Binds are saved in binds.txt next to this mod's Scripts folder and come back after a restart.
     A bind only fires when the key actually reached the game (not while you type in the console
@@ -374,6 +376,9 @@ Command("dupe", function(FullCommand, Parameters, Ar)
     SpawnBatch({ name = path, label = className }, count, Ar)
     return true
 end)
+
+-- setmoney, addmoney, setlevel, setxp, maxskills, unlockall
+require("progress").Register({ Command = Command, Say = Say, LocalPlayerController = LocalPlayerController })
 
 Load()
 print(MOD .. "loaded, binds file: " .. BINDS_FILE .. "\n")

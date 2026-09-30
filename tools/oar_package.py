@@ -1,7 +1,8 @@
 """Parse cooked UE 4.27 packages (.uasset header + .uexp data) from One-armed robber.
 
-Only what the object list needs: the name map, imports, exports, and for Blueprint class
-and function exports the declared properties (FField serialization) and function flags.
+Only what the tools need: the name map, imports, exports, for Blueprint class and function
+exports the declared properties (FField serialization) and function flags, and the simple
+default values stored on class default objects.
 Cooked here means unversioned, editor-only data filtered, tagged property serialization.
 """
 import struct
@@ -160,6 +161,49 @@ class Package:
             if r.u8():
                 r.skip(16)                                 # property guid
             r.skip(size)
+
+    def read_properties(self, r):
+        """Tagged properties -> {name: value} for the simple types (int, float, bool, string, enum
+        name, object/class reference, array of those). Other types are skipped."""
+        out = {}
+        while True:
+            name = self.fname(r)
+            if name == "None":
+                return out
+            ptype = self.fname(r)
+            size = r.i32()
+            r.i32()                                        # array index
+            extra = None
+            if ptype == "StructProperty":
+                self.fname(r)
+                r.skip(16)
+            elif ptype == "BoolProperty":
+                extra = r.u8()
+            elif ptype in ("ByteProperty", "EnumProperty", "ArrayProperty", "SetProperty"):
+                extra = self.fname(r)
+            elif ptype == "MapProperty":
+                self.fname(r)
+                self.fname(r)
+            if r.u8():
+                r.skip(16)                                 # property guid
+            start = r.p
+            v = Reader(r.d, start)
+            if ptype == "IntProperty":
+                out[name] = v.i32()
+            elif ptype == "FloatProperty":
+                out[name] = struct.unpack_from("<f", r.d, start)[0]
+            elif ptype == "BoolProperty":
+                out[name] = bool(extra)
+            elif ptype == "StrProperty":
+                out[name] = v.fstring()
+            elif ptype in ("ByteProperty", "EnumProperty") and size == 8:
+                out[name] = self.fname(v)
+            elif ptype in ("ObjectProperty", "ClassProperty"):
+                out[name] = self.obj_name(v.i32())
+            elif ptype == "ArrayProperty" and extra in ("ObjectProperty", "ClassProperty", "IntProperty"):
+                items = [v.i32() for _ in range(v.i32())]
+                out[name] = items if extra == "IntProperty" else [self.obj_name(i) for i in items]
+            r.p = start + size
 
     def read_field(self, r):
         """One serialized FProperty; returns dict(type, name, flags, detail) or None for NAME_None."""

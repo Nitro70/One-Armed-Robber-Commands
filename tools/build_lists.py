@@ -143,6 +143,8 @@ QUICK_START = [
     ("summon goldbar 5", "spawn things (mod; full list: OAR_Spawn_Commands.txt)"),
     ("dupe", "copy what you are looking at (mod)"),
     ("bind x destroytarget", "put any command on a key (mod; the game's own SetBind is dead)"),
+    ("setmoney 5000000", "set your cash and save it (mod; also addmoney, setlevel, setxp)"),
+    ("maxskills / unlockall", "every skill at top tier / every cash-bought weapon, mod, tool, armor (mod)"),
     ("DestroyTarget", "delete what you are looking at"),
     ("DestroyAll NPC_Police_base_C", "delete every cop on the map"),
     ("PlayersOnly", "freeze all AI and physics (again to unfreeze)"),
@@ -250,8 +252,8 @@ def build_commands(objs, cvars, maps, engine_words):
     w("    on your screen.")
     w("  * Cheats need a cheat manager. The OARCommands install creates one for you; without it,")
     w("    type  EnableCheats  (works in solo play only).")
-    w("  * The mod adds: bind / unbind / unbindall, summon <name> [count], summonstop, dupe [count].")
-    w("    See the project README.")
+    w("  * The mod adds: bind / unbind / unbindall, summon <name> [count], summonstop, dupe [count],")
+    w("    setmoney / addmoney / setlevel / setxp / maxskills / unlockall. See the project README.")
     w("")
     w("QUICK START")
     w("-" * 78)

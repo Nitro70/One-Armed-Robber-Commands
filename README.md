@@ -1,8 +1,9 @@
 # OAR Commands
 
 Console commands for **One-armed robber**: a `bind` that actually works, `summon <name> [count]`
-that works on any map, `dupe` for whatever you are looking at, and reference lists of every
-console command, every spawnable object and every Blueprint class in the game.
+that works on any map, `dupe` for whatever you are looking at, commands that set your cash,
+level and skills and save them, and reference lists of every console command, every spawnable
+object and every Blueprint class in the game.
 
 **Download `OAR-Commands-Installer.exe` from the [Releases](../../releases) page.**
 
@@ -60,6 +61,12 @@ Notes:
 | `spawn <name> [count]` | Same as `summon` |
 | `dupe [count]` | Spawn copies of whatever is under your crosshair |
 | `summonstop` | Stop summon batches that are still spawning |
+| `setmoney <amount>` | Set your cash, e.g. `setmoney 5000000` |
+| `addmoney <amount>` | Add cash (a negative amount removes it) |
+| `setlevel <level>` | Set your level; XP starts at 0 in that level |
+| `setxp <amount>` | Set your XP within the current level (below what it needs to level up) |
+| `maxskills` | Every skill owned and researched to its top tier |
+| `unlockall` | Every weapon, weapon mod, tool and armor that costs cash |
 
 ### bind
 
@@ -95,6 +102,30 @@ Notes:
   newly spawned one.
 - Plain level geometry (walls and floors that are just part of the map) is refused rather than
   spawning an empty object.
+
+### Cash, level and skills
+
+- Each command changes your own values and then saves them with the game's own save functions
+  (`SaveCash`, `SaveLevel`, `SaveInventoryItems`). Those write the one thing the game checks when
+  it loads a save (that it belongs to your Steam account) and upload to Steam Cloud themselves, so
+  the change sticks after a restart and on other PCs.
+- Before the first change in a session, the mod copies your `Cash`, `Level` and `InventoryItems`
+  saves next to themselves as `*.oarbackup-<date>-<time>` in
+  `%LOCALAPPDATA%\OAR\Saved\SaveGames`. The easy undo is running the command again with your old
+  value. The backups are there if something goes wrong; Steam Cloud also keeps a copy, so a
+  restored file may be replaced by the cloud one unless Steam asks which to keep.
+- Cash is capped at 2,000,000,000: the game stores it as a 32-bit number, and the gap keeps a heist
+  payout from overflowing it.
+- `maxskills` sets every skill to its top tier (3) and clears the research queue. Skills apply
+  when your character spawns, so they take effect from the next heist. A skill saved above its top
+  tier does nothing in the game; `maxskills` repairs that too.
+- `unlockall` adds the 254 items that are bought with cash. It loads them first, which can pause
+  the game briefly; the main menu is the best place to run it.
+- Coins and everything bought with coins (emotes, most masks and outfits, and the maps sold for
+  coins) are never touched. Those live in your Steam Inventory and cost real money.
+- `setxp` only takes amounts below what your level needs to level up. More would make the game
+  level you up one level at a time on your next XP gain; use `setlevel` to jump levels.
+- They work from binds too, e.g. `bind f5 addmoney 100000`.
 
 ### Cheat manager
 
@@ -147,8 +178,9 @@ Everything goes into `OAR\Binaries\Win64`. The game's own exe and pak files are 
 
 - **UE4SS 3.0.1**: `dwmapi.dll`, `UE4SS.dll`, `UE4SS-settings.ini`, `UE4SS-LICENSE.txt` and the
   stock `Mods` folder.
-- **`Mods\OARCommands`**: this project's mod (`main.lua` and `spawnables.lua`, the name table for
-  `summon`).
+- **`Mods\OARCommands`**: this project's mod (`main.lua`; `progress.lua`, the value commands;
+  `spawnables.lua`, the name table for `summon`; `unlockables.lua`, the skills and cash items for
+  `maxskills` and `unlockall`).
 - **Console key stays on ~**: stock UE4SS's `ConsoleEnablerMod` moves the console to F10. The
   installed copy keeps it on the tilde key.
 - **`mods.txt` without a byte-order mark**: the stock UE4SS 3.0.1 `mods.txt` starts with an
@@ -191,7 +223,12 @@ pip install -r requirements.txt
 python tools/oar_objects.py        # lists/OAR_Full_Object_List.txt and OAR_All_Assets.txt
 python tools/build_lists.py        # lists/OAR_Working_Commands.txt and OAR_Spawn_Commands.txt
 python tools/make_spawnables.py    # mod/Mods/OARCommands/Scripts/spawnables.lua
+python tools/make_unlockables.py   # mod/Mods/OARCommands/Scripts/unlockables.lua
 ```
+
+- `make_unlockables.py` reads each shop item's and skill's default values (`CashCost`,
+  `CoinCost`, `SteamItemDefID`, `SkillComponent`) from the pak and refuses to write a table that
+  contains anything with a coin price or a Steam item ID.
 
 - The game folder is found through Steam. Set `OAR_GAME_DIR` to override it.
 - `build_lists.py` also needs a UUU object and console variable dump (`UUU_ObjectsDump.txt`,
