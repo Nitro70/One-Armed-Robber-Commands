@@ -172,7 +172,11 @@ function M.Register(api)
                 local research = pc.ResearchingSkills
                 research:Empty()
                 local r = research[1]                  -- the one growth UE4SS 3.0.1 gets right: empty -> 1
-                r[P.skill] = { [F.skill] = w.cls, [F.tier] = w.skill.tiers }
+                -- Member by member: UE4SS 3.0.1 cannot put a class into a struct from a Lua table
+                -- (its class setter looks at the wrong stack slot and throws).
+                local s = r[P.skill]                   -- live view of the SkillSaveStruct inside
+                s[F.skill] = w.cls
+                s[F.tier] = w.skill.tiers
                 r[P.progress] = DONE_PROGRESS
                 pc:ProgressSkills(0.0)
                 if pc.UnlockedSkills:GetArrayNum() == before + 1 then

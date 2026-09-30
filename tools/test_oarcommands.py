@@ -135,6 +135,29 @@ def make_runtime(tmp):
                 end,
             })
         end
+        -- A UE4SS 3.0.1 struct: fields read back live. Assigning a Lua table to a field fails when
+        -- the table holds a class: push_classproperty checks is_userdata() at stack slot 1 (the
+        -- table) instead of the member's value, and throws "Value must be UClass or nil".
+        function StructProxy(fields)
+            local store = fields or {}
+            return setmetatable({}, {
+                __index = store,
+                __newindex = function(t, k, v)
+                    if type(v) == "table" and not v.GetAddress then
+                        for _, x in pairs(v) do
+                            if type(x) == "table" and x.GetAddress then
+                                error("[push_classproperty] Value must be UClass or nil")
+                            end
+                        end
+                    end
+                    store[k] = v
+                end,
+            })
+        end
+        function NewResearch()
+            local P = require("unlockables").ProgressFields
+            return StructProxy({ [P.skill] = StructProxy(), [P.progress] = 0 })
+        end
         local function Named(s) return { ToString = function() return s end } end
         function ClassNamed(s) return { GetFName = function() return Named(s) end } end
         GameCalls = {}        -- SaveCash, LoadLevel... in call order
@@ -173,7 +196,7 @@ def make_runtime(tmp):
         DCC.OriginalControllerRef = PC
         function ResetProgress()
             PC.Cash, PC.Level, PC.EXP = 100, 3, 12.5
-            PC.UnlockedSkills, PC.ResearchingSkills, PC.ItemInventory = MakeArray(), MakeArray(), MakeArray()
+            PC.UnlockedSkills, PC.ResearchingSkills, PC.ItemInventory = MakeArray(), MakeArray(nil, NewResearch), MakeArray()
             GameCalls, Log = {}, {}
         end
         ResetProgress()
@@ -355,7 +378,7 @@ def main():
         local first = U.Skills[1].path
         Loaded = { [first] = true }
         PC.UnlockedSkills = MakeArray({ { [F.skill] = FakeClass(first), [F.tier] = 72 } })
-        PC.ResearchingSkills = MakeArray({ { [U.ProgressFields.progress] = 3 } })
+        PC.ResearchingSkills = MakeArray({ NewResearch() }, NewResearch)
         Loads = {}
         Console("maxskills")
     ''')
