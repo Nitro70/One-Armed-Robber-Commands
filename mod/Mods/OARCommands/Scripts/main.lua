@@ -18,6 +18,9 @@
     Binds are saved in binds.txt next to this mod's Scripts folder and come back after a restart.
     A bind only fires when the key actually reached the game (not while you type in the console
     or a chat box). This mod's own commands run directly; anything else goes through the console.
+
+    It also makes ToggleDebugCamera work both ways in hosted games (the debug camera gets a cheat
+    manager), and binds keep working while the debug camera is on.
 --]]
 
 local MOD = "[OARCommands] "
@@ -86,7 +89,14 @@ local function Save()
     f:close()
 end
 
+-- The controller the local player is driving right now. While ToggleDebugCamera is on that is the
+-- debug camera's own controller; the normal one is detached then and gets no input.
 local function LocalPlayerController()
+    local lp = FindFirstOf("LocalPlayer")
+    if lp and lp:IsValid() then
+        local pc = lp.PlayerController
+        if pc:IsValid() then return pc end
+    end
     local all = FindAllOf("PlayerController")
     if not all then return nil end
     for _, pc in pairs(all) do
@@ -265,6 +275,15 @@ function CheatManagerFor(pc)
     end
     return nil
 end
+
+-- ToggleDebugCamera switches you to a separate DebugCameraController. In hosted games the engine
+-- gives it no cheat manager (and UE4SS's CheatManagerEnablerMod only adds one when a controller
+-- gets a body), so ToggleDebugCamera could not run again to switch back. Give it one as it spawns.
+NotifyOnNewObject("/Script/Engine.DebugCameraController", function(dcc)
+    ExecuteInGameThread(function()
+        if dcc:IsValid() then CheatManagerFor(dcc) end
+    end)
+end)
 
 local function SpawnBatch(entry, count, Ar)
     local pc = LocalPlayerController()

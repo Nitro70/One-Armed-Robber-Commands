@@ -55,9 +55,20 @@ def make_runtime(tmp):
         function PC:WasInputKeyJustPressed(k) return false end
         function PC:EnableCheats() end
         function FindAllOf(name) return { PC } end
+        -- debug camera: its own controller, which the engine gives no cheat manager in hosted games
+        DCC = { CheatManager = Invalid, CheatClass = CM }
+        function DCC:IsValid() return true end
+        function DCC:IsLocalController() return true end
+        function DCC:IsInputKeyDown(k) return true end
+        function DCC:WasInputKeyJustPressed(k) return false end
+        LP = nil              -- the LocalPlayer; nil means "not found", like during loading
+        function FindFirstOf(name) if name == "LocalPlayer" then return LP end end
+        NewObjectHooks = {}
+        function NotifyOnNewObject(cls, fn) NewObjectHooks[cls] = fn end
+        CallPCs = {}          -- which controller each ExecuteConsoleCommand ran on
         local KSL = {}
         function KSL:IsValid() return true end
-        function KSL:ExecuteConsoleCommand(world, cmd, pc) Calls[#Calls + 1] = cmd end
+        function KSL:ExecuteConsoleCommand(world, cmd, pc) Calls[#Calls + 1] = cmd; CallPCs[#CallPCs + 1] = pc end
         -- line trace for dupe
         LookTarget = nil      -- actor the fake trace hits
         TraceArgs = nil
@@ -188,6 +199,23 @@ def main():
     lua.execute('Summons = {}; Calls = {}; Console([[bind f2 "god | dupe 2"]]); KeyCallbacks["KEY_F2"](); RunDelays()')
     ok &= check("mixed bind: console part + own command", values(g.Calls) == ["god"] and values(g.Summons) == [gold] * 2)
     lua.execute('Console("unbind c"); Console("unbind f2")')
+
+    # --- debug camera (hosted game: the engine gives its controller no cheat manager)
+    hook = g.NewObjectHooks["/Script/Engine.DebugCameraController"]
+    ok &= check("mod watches for debug camera controllers", hook is not None)
+    if hook is not None:
+        lua.execute('Constructed = 0; NewObjectHooks["/Script/Engine.DebugCameraController"](DCC)')
+        ok &= check("a new debug camera gets a cheat manager, so ToggleDebugCamera can exit",
+                    g.Constructed == 1 and lua.eval("DCC.CheatManager == CM"))
+    # In the debug camera the local player drives DCC; the normal controller is frozen and gets no keys.
+    lua.execute('LP = { PlayerController = DCC, IsValid = function() return true end }')
+    lua.execute('KeyDown = false; Calls = {}; CallPCs = {}; Console("bind g toggledebugcamera"); KeyCallbacks["KEY_G"]()')
+    ok &= check("in the debug camera a bind runs on the debug camera's controller",
+                values(g.Calls) == ["toggledebugcamera"] and lua.eval("CallPCs[1] == DCC"))
+    lua.execute('KeyDown = true; LP.PlayerController = PC; Calls = {}; CallPCs = {}; KeyCallbacks["KEY_G"]()')
+    ok &= check("after leaving it, binds run on the normal controller again",
+                values(g.Calls) == ["toggledebugcamera"] and lua.eval("CallPCs[1] == PC"))
+    lua.execute('LP = nil; Console("unbind g")')
 
     # --- restart
     lua2, _ = make_runtime(tmp)

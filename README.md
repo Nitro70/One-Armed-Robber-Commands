@@ -102,6 +102,17 @@ Cheat commands (`summon`, `destroytarget`, `god` and so on) need a cheat manager
 game only makes one in solo play. The mod creates one whenever it is missing, which also covers
 games you host.
 
+### Debug camera
+
+`toggledebugcamera` moves you to a separate debug-camera controller. In a game you host, the engine
+gives that controller no cheat manager, so typing `toggledebugcamera` again did nothing and you
+were stuck in the free camera. The mod gives the debug camera a cheat manager as it spawns, so the
+same command takes you back. Binds also follow you into the debug camera, so a key bound to
+`toggledebugcamera` works both ways.
+
+`teleport` moves your character to what your character is aiming at, not to the debug camera, so
+it cannot bring you to where the free camera is.
+
 ## Game commands that work
 
 Short list; the full, verified list is in
