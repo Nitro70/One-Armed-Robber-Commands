@@ -12,7 +12,7 @@ HOW 'WORKS' WAS DECIDED
     minus the one Cheat-flagged cvar (blocked in shipping) and 13 'Unregistered' ini
     leftovers that do nothing.
   * Gameplay cheats only really apply when you are HOST or SOLO. As a client the
-    server overrides you: god won't stop damage, fly rubber-bands, summons are only
+    server overrides you: god won't stop damage, ghost rubber-bands, summons are only
     on your screen.
   * Cheats need a cheat manager. The OARCommands install creates one for you; without it,
     type  EnableCheats  (works in solo play only).
@@ -22,7 +22,7 @@ HOW 'WORKS' WAS DECIDED
 QUICK START
 ------------------------------------------------------------------------------
   god                              invincible
-  ghost / fly / walk               noclip / fly / back to normal
+  ghost / fly / walk               through walls / no gravity (no up or down in this game) / normal
   teleport                         go to where you are aiming
   slomo 0.3                        slow motion (slomo 1 = normal)
   summon goldbar 5                 spawn things (mod; full list: OAR_Spawn_Commands.txt)
@@ -42,8 +42,8 @@ QUICK START
 1. CHEATS (CheatManager)
 ------------------------------------------------------------------------------
   God                                          Toggle invincibility
-  Fly                                          Fly mode, still collides with walls (type walk to stop)
-  Ghost                                        Noclip: fly through walls (type walk to stop)
+  Fly                                          No gravity only: you hover at your height, cannot go up or down (walk to stop)
+  Ghost                                        Like fly plus no collision: walk through walls at your height (walk to stop)
   Walk                                         Back to normal walking after fly/ghost
   teleport                                     Teleport to whatever your crosshair is pointing at
   Summon <ClassName:text>                      Spawn an actor in front of you. See OAR_Spawn_Commands.txt

@@ -53,7 +53,7 @@ Notes:
 | Command | What it does |
 |---|---|
 | `bind <key> <command>` | Put a command on a key, e.g. `bind x destroytarget` |
-| `bind <key> "<a> \| <b>"` | Several commands on one key, e.g. `bind f1 "god \| fly"` |
+| `bind <key> "<a> \| <b>"` | Several commands on one key, e.g. `bind f1 "god \| ghost"` |
 | `bind` | List your binds |
 | `bind <key>` | Show what one key does |
 | `unbind <key>` / `unbindall` | Remove one bind / all binds |
@@ -152,7 +152,7 @@ Short list; the full, verified list is in
 | Command | What it does |
 |---|---|
 | `god` | Invincible |
-| `ghost` / `fly` / `walk` | Noclip / fly / back to normal |
+| `ghost` / `walk` | Walk through walls at your current height / back to normal (see `fly` below) |
 | `teleport` | Go to where you are aiming |
 | `slomo 0.3` | Slow motion (`slomo 1` is normal) |
 | `destroytarget` | Delete what you are looking at |
@@ -164,6 +164,14 @@ Short list; the full, verified list is in
 | `open <map>` | Load a map in solo play; the map names are in the command list |
 
 Cheats only really apply when you host or play solo. As a client the server overrides you.
+
+`fly` prints "You feel much lighter" but barely changes anything in this game. It switches your
+character to the engine's flying movement, which only turns gravity off. One-armed robber moves
+you along your body's forward and right directions, which are always level, and has no up or
+down input, so you cannot climb: you hover at the height you were at, and walking off a ledge
+leaves you floating instead of falling. Jumping does nothing while flying. `ghost` is the same
+plus no collision, so it lets you walk through walls at your current height. `walk` turns both
+off.
 
 Worth knowing from the full list:
 

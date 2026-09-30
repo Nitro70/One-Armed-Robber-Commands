@@ -6,7 +6,7 @@
         bind                      list your binds
         bind <key>                show what one key does
         bind <key> <command>      bind a key, e.g.  bind x destroytarget
-                                  several commands: bind f1 "god | fly"
+                                  several commands: bind f1 "god | ghost"
         unbind <key>              remove one bind
         unbindall                 remove every bind
         summon <thing> [count]    spawn count copies 0.15 s apart, e.g.  summon goldbar 10

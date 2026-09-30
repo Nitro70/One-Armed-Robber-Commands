@@ -46,8 +46,8 @@ NOT_ROUTED = {
 DESC = {
     # CheatManager
     "God": "Toggle invincibility",
-    "Fly": "Fly mode, still collides with walls (type walk to stop)",
-    "Ghost": "Noclip: fly through walls (type walk to stop)",
+    "Fly": "No gravity only: you hover at your height, cannot go up or down (walk to stop)",
+    "Ghost": "Like fly plus no collision: walk through walls at your height (walk to stop)",
     "Walk": "Back to normal walking after fly/ghost",
     "teleport": "Teleport to whatever your crosshair is pointing at",
     "Summon": "Spawn an actor in front of you. See OAR_Spawn_Commands.txt",
@@ -137,7 +137,7 @@ CLASS_TITLES = OrderedDict([
 
 QUICK_START = [
     ("god", "invincible"),
-    ("ghost / fly / walk", "noclip / fly / back to normal"),
+    ("ghost / fly / walk", "through walls / no gravity (no up or down in this game) / normal"),
     ("teleport", "go to where you are aiming"),
     ("slomo 0.3", "slow motion (slomo 1 = normal)"),
     ("summon goldbar 5", "spawn things (mod; full list: OAR_Spawn_Commands.txt)"),
@@ -248,7 +248,7 @@ def build_commands(objs, cvars, maps, engine_words):
     w("    minus the one Cheat-flagged cvar (blocked in shipping) and 13 'Unregistered' ini")
     w("    leftovers that do nothing.")
     w("  * Gameplay cheats only really apply when you are HOST or SOLO. As a client the")
-    w("    server overrides you: god won't stop damage, fly rubber-bands, summons are only")
+    w("    server overrides you: god won't stop damage, ghost rubber-bands, summons are only")
     w("    on your screen.")
     w("  * Cheats need a cheat manager. The OARCommands install creates one for you; without it,")
     w("    type  EnableCheats  (works in solo play only).")
