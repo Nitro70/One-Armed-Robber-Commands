@@ -1,0 +1,116 @@
+"""Descriptions for the engine text commands found by oar_exe_commands.py.
+
+Every key word here was found in OAR-Win64-Shipping.exe as an argument to FParse::Command, so its
+handler is compiled into this build. build_lists.py only prints entries whose key word the
+extractor actually finds.
+"""
+
+ENGINE_COMMANDS = [
+    ("MAPS AND NETWORK", [
+        ("OPEN", "open <map>", "Load a map (solo). Add ?listen to host it: open Casino?listen"),
+        ("TRAVEL", "travel <map>", "Travel to a map"),
+        ("SERVERTRAVEL", "servertravel <map>", "Host only: move everyone to a map"),
+        ("STREAMMAP", "streammap <map>", "Load a map with streaming"),
+        ("DISCONNECT", "disconnect", "Leave the current game"),
+        ("RECONNECT", "reconnect", "Rejoin the last server"),
+        ("CANCELASYNCLOAD", "cancelasyncload", "Stop background loading"),
+    ]),
+    ("SCREEN, QUALITY AND PICTURES", [
+        ("SETRES", "setres 1920x1080f", "Resolution + mode: f fullscreen, w windowed, wf borderless"),
+        ("FULLSCREEN", "fullscreen", "Toggle fullscreen (also toggle_fullscreen, forcefullscreen)"),
+        ("GAMMA", "gamma 2.2", "Display gamma"),
+        ("SCALABILITY", "scalability 0", "All quality settings at once: 0 low, 1 medium, 2 high, 3 epic, auto"),
+        ("VIEWMODE", "viewmode unlit", "lit, unlit, wireframe, lightingonly (debug modes are blocked)"),
+        ("NEXTVIEWMODE", "nextviewmode / prevviewmode", "Cycle view modes"),
+        ("SHOW", "show collision", "Toggle an engine show flag: show fog, show particles, show bounds..."),
+        ("SHOWLAYER", "showlayer <layer>", "Toggle a named actor layer"),
+        ("HIGHRESSHOT", "HighResShot 2", r"Screenshot at 2x (or HighResShot 3840x2160), saved in OAR\Saved\Screenshots"),
+        ("HIGHRESSHOTUI", "HighResShotUI", "High-res screenshot settings window"),
+        ("SHOT", "shot", "Screenshot (also: screenshot)"),
+        ("BUGSCREENSHOT", "bugscreenshot <name>", "Named screenshot (bugscreenshotwithhudinfo adds HUD info)"),
+        ("KILLPARTICLES", "killparticles", "Remove every particle effect in the world"),
+        ("FORCESKELLOD", "forceskellod lod=1", "Force character mesh level of detail (lod=0 to reset)"),
+        ("PAUSERENDERCLOCK", "pauserenderclock", "Freeze material animations"),
+        ("SHOWUI", "showui", "Toggle viewport UI"),
+        ("R.RESETVIEWSTATE", "r.ResetViewState", "Reset temporal rendering history"),
+        ("R.LOCKVIEW", "r.LockView", "Lock the rendering view (debug)"),
+        ("TOGGLEMIPFADE", "togglemipfade / texturedefrag / precache", "Texture and loading internals"),
+    ]),
+    ("INSPECT AND CHANGE OBJECTS  (class names come from OAR_Full_Object_List.txt)", [
+        ("GETALL", "getall <Class> <Property>", "Print a property on every object of a class"),
+        ("GET", "get <Class> <Property>", "Print a class default value"),
+        ("SET", "set <Class> <Property> <Value>", "Change a property on every object of a class and its default"),
+        ("SETNOPEC", "setnopec <Class> <Property> <Value>", "Same as set, without change notifications"),
+        ("LISTPROPS", "listprops <Class> *", "List a class's properties (wildcards allowed)"),
+        ("SHOWDEFAULTS", "showdefaults <Class>", "Print a class's default values"),
+        ("DISPLAY", "display <Object> <Property>", "Show one object's property on screen"),
+        ("DISPLAYALL", "displayall <Class> <Property>", "Show a property for every object of a class on screen"),
+        ("DISPLAYALLLOCATION", "displayalllocation <Class>", "Show every object's location (displayallrotation too)"),
+        ("DISPLAYCLEAR", "displayclear", "Remove the display/displayall overlays"),
+        ("GETALLLOCATION", "getalllocation <Class>", "Print every object's location (getallrotation too)"),
+        ("REATTACHCOMPONENTS", "reattachcomponents <Class>", "Re-attach components (reregistercomponents too)"),
+        ("LOGACTORCOUNTS", "logactorcounts", "Log how many actors each level has"),
+        ("LISTPAWNCOMPONENTS", "listpawncomponents", "Log every pawn's components"),
+        ("LISTSKELMESHES", "listskelmeshes", "Log every skeletal mesh"),
+        ("LISTAWAKEBODIES", "listawakebodies", "Log awake physics bodies (listsimbodies, listmovebody too)"),
+        ("SHOWPENDINGKILLS", "showpendingkills", "Log objects waiting to be deleted"),
+    ]),
+    ("RUNNING COMMANDS", [
+        ("EXEC", "exec <file.txt>", r"Run each line of a text file as a command. Use a full path: exec C:\cmds.txt (untested)"),
+        ("DEFER", "defer <command>", "Run a command on the next frame"),
+        ("CE", "ce <EventName>", "Fire a level-script event (few maps have any; see the object list)"),
+        ("TOGGLECVAR", "togglecvar <cvar> <a> <b>", "Flip a setting between two values: togglecvar t.MaxFPS 30 0"),
+    ]),
+    ("REPLAYS", [
+        ("DEMOREC", "demorec <name>", "Start recording a replay"),
+        ("DEMOSTOP", "demostop", "Stop recording or playback"),
+        ("DEMOPLAY", "demoplay <name>", "Play a recorded replay"),
+        ("DEMOPAUSE", "demopause", "Pause replay playback"),
+        ("DEMOSCRUB", "demoscrub <seconds>", "Jump to a time in the replay"),
+        ("DEMOSPEED", "demospeed <rate>", "Replay speed"),
+        ("STOPMOVIECAPTURE", "stopmoviecapture", "Stop a movie capture"),
+    ]),
+    ("INFO AND LOGS", [
+        ("STAT", "stat fps", "Overlays: fps, unit, unitgraph, detailed, hitches, levels, summary, ai, none"),
+        ("GAMEVER", "gamever", "Print the build version (also gameversion)"),
+        ("LOG", "log list", "List log categories; log <category> <verbosity> changes one"),
+        ("FLUSHLOG", "flushlog", "Write the log file now"),
+        ("DUMPTICKS", "dumpticks", "Log everything that ticks (grouped / enabled / disabled)"),
+        ("GETMAXTICKRATE", "getmaxtickrate", "Print the tick rate cap"),
+        ("FLUSHPERSISTENTDEBUGLINES", "flushpersistentdebuglines", "Clear debug lines drawn on screen"),
+        ("CRACKURL", "crackurl <url>", "Print how the engine parses a travel URL"),
+        ("MOVECOMPTIMES", "movecomptimes", "Log movement component timings"),
+    ]),
+    ("PHYSICS DEBUG", [
+        ("PXVIS", "pxvis collision", "PhysX debug drawing (apexvis, physxinfo, physxshared, pvd, prephysbones)"),
+        ("PHYSX_CLEAR_ALL", "physx_clear_all", "Clear PhysX debug state"),
+    ]),
+    ("ONLINE, STEAM AND NETWORK INTERNALS  (developer dumps; safe but not useful in play)", [
+        ("ONLINE", "online ...", "Online subsystem: friend, presence, session, auth, synclobbies, receipts, voice"),
+        ("NET", "net ...", "Network driver commands"),
+        ("SOCKETS", "sockets ...", "Socket subsystem"),
+        ("HTTP", "http test / http dumpreq", "HTTP module"),
+        ("SSL", "ssl ...", "SSL module"),
+        ("TCPMESSAGING", "tcpmessaging status", "Messaging transports (udpmessaging, messaging)"),
+        ("REPLAYSTREAMER", "replaystreamer ...", "Replay streaming"),
+        ("MEDIA", "media ...", "Media player"),
+        ("WEBCALL", "webcall / dumpembedded / exitembedded", "Embedded browser bridge"),
+        ("HMD", "hmd / stereo on / vr.SetTrackingOrigin", "VR headset commands (hmdpos, hmdversion, vr.mirrormode)"),
+    ]),
+    ("DO NOT USE", [
+        ("DELETECLOUDFILES", "deletecloudfiles", "Deletes cloud files. This game keeps your cash and progress in Steam Cloud"),
+        ("DOUBLEFREEFINDERCRASH", "DoubleFreeFinderCrash", "Crashes the game on purpose"),
+        ("PURCHASE", "purchase ...", "Store purchase test hook"),
+        ("MALLOCFRAMEPROFILER", "MallocFrameProfiler", "Heavy memory profiler"),
+        ("EXIT", "exit / quit", "Closes the game"),
+    ]),
+]
+
+# Words the extractor finds that are already described under another entry.
+COVERED_ELSEWHERE = {
+    "TOGGLE_FULLSCREEN", "FORCEFULLSCREEN", "PREVVIEWMODE", "SCREENSHOT", "BUGSCREENSHOTWITHHUDINFO", "GETALLROTATION",
+    "DISPLAYALLROTATION", "REREGISTERCOMPONENTS", "LISTSIMBODIES", "LISTMOVEBODY", "GAMEVERSION", "QUIT", "TEXTUREDEFRAG",
+    "PRECACHE", "APEXVIS", "PHYSXINFO", "PHYSXSHARED", "PVD", "PREPHYSBONES", "FRIEND", "PRESENCE", "SESSION", "AUTH",
+    "SYNCLOBBIES", "RECEIPTS", "VOICE", "UDPMESSAGING", "MESSAGING", "DUMPEMBEDDED", "EXITEMBEDDED", "HMDPOS",
+    "HMDVERSION", "STEREO", "VR.SETTRACKINGORIGIN", "VR.MIRRORMODE", "DUMPREQ",
+}
