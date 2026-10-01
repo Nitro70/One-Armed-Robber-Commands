@@ -1,6 +1,7 @@
 ONE-ARMED ROBBER: CONSOLE COMMANDS THAT WORK
 ==============================================================================
 Game build : Unreal Engine 4.27 shipping (OAR-Win64-Shipping.exe, 2026-08-23)
+Game files : the Data Center heist update of 2026-10-01 (the exe did not change)
 Console    : opened with ~ once the OARCommands installer (UE4SS) is in, or with UUU
 Built from : a UUU object + console variable dump, the game's exe and its pak files
 Commands are not case-sensitive. Spawning is in OAR_Spawn_Commands.txt.
@@ -18,7 +19,8 @@ HOW 'WORKS' WAS DECIDED
     type  EnableCheats  (works in solo play only).
   * The mod adds: bind / unbind / unbindall, summon <name> [count], summonstop, dupe [count],
     setmoney / addmoney / setlevel / setxp / maxskills / unlockall, noclip, revive,
-    commandsharing / host. See the project README.
+    selectmap / forcemap, commandsharing / host, reloadconfig. All of their values and code are in
+    Mods\OARCommands\config.lua, which you can edit. See the project README.
 
 QUICK START
 ------------------------------------------------------------------------------
@@ -33,6 +35,9 @@ QUICK START
   maxskills / unlockall            every skill at top tier / every cash-bought weapon, mod, tool, armor (mod)
   noclip                           fly through walls: WASD, Space up, Ctrl down, Shift faster; again to land (mod)
   revive                           get back up with full health (mod)
+  selectmap museum                 host: pick the heist from the console; selectmap alone lists them (mod)
+  forcemap museum                  host: start a map now for everyone, no ready-up or countdown (mod)
+  reloadconfig                     load Mods\OARCommands\config.lua again after editing it: every command's values and code (mod)
   commandsharing 1                 host: guests with the mod can run commands through your game (mod; 0-3)
   DestroyTarget                    delete what you are looking at
   DestroyAll NPC_Police_base_C     delete every cop on the map
@@ -260,14 +265,15 @@ QUICK START
     Entry                              ExampleMap                         HighRise
     ImageScene                         ImageScene_Skins                   JewelleryStore
     Knightsbridge_day                  MainMenu                           Mansion_Car
-    Map_Harbour                        Map_NewsStation                    Map_PostalOffice
-    Map_Sciencelab                     Map_Setup_jewellery_1              Map_WineStore
-    Menuload                           Museum_night                       Overview
-    Setup_ConstructionSite             Setup_MilitaryBase                 Setup_PostalOffice
-    Setup_ShadyWarehouse               Setup_UndergroundConstructionSite  SetupTestMap
-    Small_Bank                         Small_Map_Presset                  SteamUpdateImage
-    TestMap                            TestMap_empty                      TikTokScene
-    Transition                         Tutorial_Loud                      Tutorial_Stealth
+    Map_AIDataCenter                   Map_Harbour                        Map_NewsStation
+    Map_PostalOffice                   Map_Sciencelab                     Map_Setup_jewellery_1
+    Map_WineStore                      Menuload                           Museum_night
+    Overview                           Setup_ConstructionSite             Setup_MilitaryBase
+    Setup_PostalOffice                 Setup_ShadyWarehouse               Setup_UndergroundConstructionSite
+    SetupTestMap                       Small_Bank                         Small_Map_Presset
+    SteamUpdateImage                   TestMap                            TestMap_empty
+    TikTokScene                        Transition                         Tutorial_Loud
+    Tutorial_Stealth
 
 4. HANDY SETTINGS (type the name alone to see its current value)
 ------------------------------------------------------------------------------

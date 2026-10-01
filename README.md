@@ -2,9 +2,13 @@
 
 Console commands for **One-armed robber**: a `bind` that actually works, `summon <name> [count]`
 that works on any map, `dupe` for whatever you are looking at, a real `noclip`, `revive`,
-commands that set your cash, level and skills and save them, **command sharing** so friends who
+commands that set your cash, level and skills and save them, `selectmap` and `forcemap` to pick
+a heist from the console and start it without the ready-up, **command sharing** so friends who
 also have the mod can run commands through your game when you host, and reference lists of every
 console command, every spawnable object and every Blueprint class in the game.
+
+Every command's values and full code sit in one file, **`config.lua`**, which you can edit and
+load again in the running game with `reloadconfig`.
 
 **Download `OAR-Commands-Installer.exe` from the [Releases](../../releases) page.**
 
@@ -18,6 +22,7 @@ console command, every spawnable object and every Blueprint class in the game.
 
 - [Install](#install)
 - [Commands the mod adds](#commands-the-mod-adds)
+- [config.lua: change any command](#configlua-change-any-command)
 - [Command sharing](#command-sharing)
 - [Game commands that work](#game-commands-that-work)
 - [What the installer changes](#what-the-installer-changes)
@@ -35,7 +40,8 @@ console command, every spawnable object and every Blueprint class in the game.
 4. Start the game and press **~** to open the console.
 
 To remove everything, run the installer again and click **Uninstall**. It deletes only the files
-it installed. Other UE4SS mods you have are left alone.
+it installed, plus the mod's own folder with your binds and `config.lua`. Other UE4SS mods you
+have are left alone. Installing again puts the default `config.lua` back.
 
 Notes:
 
@@ -72,8 +78,12 @@ Notes:
 | `unlockall` | Every weapon, weapon mod, tool and armor that costs cash |
 | `noclip` | Fly through walls: WASD, Space up, Ctrl down, Shift twice as fast; again to land |
 | `revive` | Get back up with full health |
+| `selectmap [heist]` | Host: pick the heist from the console; with no name, list the heists |
+| `forcemap [map]` | Host: start a map now for everyone, with no ready-up and no countdown |
 | `commandsharing [0-3]` | Host: let guests with the mod run commands through your game (see [Command sharing](#command-sharing)) |
 | `host <command>` | Guest: send any command to the host (for sharing level 3) |
+| `reloadconfig` | Load `config.lua` again after you edited it (see [config.lua](#configlua-change-any-command)) |
+| `reloadconfig default` | Load the untouched copy, `config.default.lua`, without changing your file |
 
 ### bind
 
@@ -188,6 +198,95 @@ it cannot bring you to where the free camera is.
 - It has to run on the host (the host decides who is downed): it does when you host or play solo,
   and as a guest it goes through [command sharing](#command-sharing).
 
+### selectmap and forcemap
+
+Both are for the host (or solo play).
+
+- **`selectmap`** lists the heists with their short names and marks the selected one.
+- **`selectmap <heist>`** picks the heist, the same way the map screen does. Everyone sees the
+  new heist in the lobby, readies up, and the countdown runs as usual.
+- **`forcemap <map>`** picks it and starts it at once for everyone: no ready-up, no countdown.
+- **`forcemap`** alone starts the heist that is already selected.
+
+```
+selectmap museum
+forcemap data center
+```
+
+- **Names:** the short name from the list (`datacenter`), the heist's title (`data center`) or
+  its map file (`map_aidatacenter`). A unique start is enough (`forcemap muse`).
+- **Other maps:** `forcemap` also takes every other map file in the game, for example
+  `forcemap testmap`, `forcemap tutorial_loud` or `forcemap mainmenu` (back to the lobby). Their
+  names are in the command list. Test and demo maps are unfinished; expect some to be empty.
+- **From inside a heist:** `forcemap <map>` goes straight to the other map with everyone.
+  `selectmap` needs the lobby.
+- **Heists sold for coins** are only picked or started when the game itself counts them as
+  yours (in your Steam inventory, the same test the map screen uses). `selectmap` shows which
+  ones those are. Level requirements are not checked.
+- **How it works:**
+  - In the lobby the host's menu starts a heist by waiting until everyone is ready, counting
+    down, and then running its own start function, which closes the lobby to new players and
+    travels with `servertravel`.
+  - `forcemap` marks every lobby player as ready on the host and calls that same function, so
+    the game's own start runs without the wait.
+  - Outside the lobby it uses `servertravel` directly, the command the game itself uses to bring
+    everyone back to the lobby after a heist.
+- Guests cannot use them, and [command sharing](#command-sharing) never passes them to the host.
+
+## config.lua: change any command
+
+Everything the mod's commands do is written in one file you can edit:
+
+```
+OAR\Binaries\Win64\Mods\OARCommands\config.lua
+```
+
+It is not a list of simple switches. It is the mod itself, in Lua:
+
+1. **Values at the top.** One table, `V`, with the numbers, keys, lists and names the commands
+   use. For example:
+   - `SummonDelayMs` and `SummonMax`: how fast and how many `summon` spawns;
+   - `NoclipKeysUp`, `NoclipKeysDown`, `NoclipKeysFast`, `NoclipFastMultiplier`, `NoclipSpeed`;
+   - `MaxCashAndLevel`: the cap for `setmoney` and `setlevel`;
+   - `ShareLevelAtStart`, `ShareTimeoutMs`, and the lists of what each sharing level allows
+     and what is always blocked;
+   - `KeyAliases`: extra spellings for keys in `bind`.
+2. **The complete code of every command below that**, one section each, with the explanation of
+   how it works: `bind`, `summon`, `dupe`, the value commands, `noclip`, `revive`, `selectmap`,
+   `forcemap`, command sharing and the debug camera fix. Change it, remove it, or add your own
+   command with `Core.Command("name", function(FullCommand, Parameters, Ar) ... return true end)`.
+
+After saving, type **`reloadconfig`** in the console. The change applies at once, with no
+restart.
+
+- **Mistakes are safe to make.**
+  - If the file has an error, `reloadconfig` prints the error with its line number and the
+    commands that were loaded before keep working.
+  - If one command fails while it runs, the console shows `<command> failed: <error>`.
+  - If the file is already broken when the game starts, only `reloadconfig` exists until you fix
+    it.
+- **Going back to the default:**
+  - `reloadconfig default` loads `config.default.lua`, the untouched copy next to your file,
+    until the next `reloadconfig` or restart. Your file is not changed.
+  - To reset for good, copy `config.default.lua` over `config.lua`, or uninstall and install
+    again: uninstalling removes `config.lua`, installing writes the default.
+- **Updates:** a newer OAR Commands keeps your edited `config.lua` when its default config did
+  not change. When the default did change, your file is saved as `config.old.lua` and the new
+  default is installed, because the config holds the commands' code and an old one would miss
+  what the new version added. Copy your changes over from `config.old.lua`.
+- **What survives `reloadconfig`:** your binds, the command sharing level, noclip, and running
+  summon batches. A game restart resets everything except the binds.
+- **The name tables** are separate files in `Mods\OARCommands\Scripts` and are read again on
+  every `reloadconfig` too: `spawnables.lua` (`summon`), `unlockables.lua` (`maxskills`,
+  `unlockall`) and `maps.lua` (`selectmap`, `forcemap`).
+- **`Scripts\main.lua`** is only the loader: it registers each command, key and hook with UE4SS
+  once and looks up the current code from `config.lua` every time one runs. UE4SS cannot take a
+  registration back, which is why they live there and not in the config.
+- The top of `config.lua` lists what the loader offers (`Core.Command`, `Core.Hook`,
+  `Core.KeyBind`, `Core.State`...) and the UE4SS 3.0.1 limits worth knowing before changing
+  code. The commands that change your save go through the game's own save functions; keep it
+  that way.
+
 ## Command sharing
 
 When you host and your friends also have OAR Commands, you can let them run commands through your
@@ -210,12 +309,12 @@ commandsharing 1
 
 - **Anything that would close, move or cut off your game:** `exit`, `quit`, `open`, `travel`,
   `servertravel`, `disconnect`, `reconnect`, `switchlevel`, `restartlevel`, `streammap`,
-  `demoplay`, `demorec`.
+  `demoplay`, `demorec`, `selectmap`, `forcemap`.
 - **Anything that touches your files or crashes the game:** `exec`, `deletecloudfiles`,
   `DoubleFreeFinderCrash`, `MallocFrameProfiler`, `purchase`, `debug`.
 - **The mod's commands that stay on each player's own game and save:** `setmoney`, `addmoney`,
   `setlevel`, `setxp`, `maxskills`, `unlockall`, `bind`, `unbind`, `unbindall`,
-  `commandsharing`, `host`.
+  `commandsharing`, `host`, `reloadconfig`.
 
 **What runs where.** A guest's command runs as that guest, on the host's game:
 
@@ -295,12 +394,13 @@ Everything goes into `OAR\Binaries\Win64`. The game's own exe and pak files are 
 - **UE4SS 3.0.1**: `dwmapi.dll`, `UE4SS.dll`, `UE4SS-settings.ini`, `UE4SS-LICENSE.txt` and the
   stock `Mods` folder.
 - **`Mods\OARCommands`**: this project's mod:
-  - `main.lua`;
-  - `share.lua`, command sharing;
-  - `player.lua`, `noclip` and `revive`;
-  - `progress.lua`, the value commands;
-  - `spawnables.lua`, the name table for `summon`;
-  - `unlockables.lua`, the skills and cash items for `maxskills` and `unlockall`.
+  - `config.lua`, the values and the code of every command (see
+    [config.lua](#configlua-change-any-command)), and `config.default.lua`, its untouched copy;
+  - `Scripts\main.lua`, the loader;
+  - `Scripts\spawnables.lua`, the name table for `summon`;
+  - `Scripts\unlockables.lua`, the skills and cash items for `maxskills` and `unlockall`;
+  - `Scripts\maps.lua`, the heists and map files for `selectmap` and `forcemap`;
+  - `binds.txt`, your binds, once you make one.
 - **Console key stays on ~**: stock UE4SS's `ConsoleEnablerMod` moves the console to F10. The
   installed copy keeps it on the tilde key.
 - **`mods.txt` without a byte-order mark**: the stock UE4SS 3.0.1 `mods.txt` starts with an
@@ -315,14 +415,15 @@ Everything goes into `OAR\Binaries\Win64`. The game's own exe and pak files are 
 ## Reference lists
 
 All four were generated from the game's files and apply to anyone's copy of the game
-(Unreal Engine 4.27 shipping build from 23 August 2026).
+(Unreal Engine 4.27 shipping build from 23 August 2026, game files from the Data Center heist
+update of 1 October 2026, which left the exe unchanged).
 
 | File | What is in it |
 |---|---|
 | [OAR_Working_Commands.txt](lists/OAR_Working_Commands.txt) | Every cheat and exec command with its parameters, every engine text command compiled into the exe (161 words, grouped, with a do-not-use section), handy settings, all 353 console commands and all 2,976 console variables, the maps in the game (including unreleased test maps like `CheatLevel` and `Map_NewsStation`) |
-| [OAR_Spawn_Commands.txt](lists/OAR_Spawn_Commands.txt) | All 1,052 spawnable Blueprints as `summon` lines, grouped: loot, tools, explosives, NPCs, police gear, vehicles, casino props, security and heist objects, guns, attachments, cosmetics, shop displays, buildings |
-| [OAR_Full_Object_List.txt](lists/OAR_Full_Object_List.txt) | All 1,277 Blueprint classes with parent classes, components, variables and functions (with parameters and Server/Client/Multicast markers), which maps each class is placed on, what every map contains, and the game's structs |
-| [OAR_All_Assets.txt](lists/OAR_All_Assets.txt) | All 15,741 assets in the game, grouped by type |
+| [OAR_Spawn_Commands.txt](lists/OAR_Spawn_Commands.txt) | All 1,058 spawnable Blueprints as `summon` lines, grouped: loot, tools, explosives, NPCs, police gear, vehicles, casino props, security and heist objects, guns, attachments, cosmetics, shop displays, buildings |
+| [OAR_Full_Object_List.txt](lists/OAR_Full_Object_List.txt) | All 1,283 Blueprint classes with parent classes, components, variables and functions (with parameters and Server/Client/Multicast markers), which maps each class is placed on, what every map contains, and the game's structs |
+| [OAR_All_Assets.txt](lists/OAR_All_Assets.txt) | All 15,809 assets in the game, grouped by type |
 
 How "works" was decided for the command list:
 
@@ -344,11 +445,18 @@ python tools/oar_objects.py        # lists/OAR_Full_Object_List.txt and OAR_All_
 python tools/build_lists.py        # lists/OAR_Working_Commands.txt and OAR_Spawn_Commands.txt
 python tools/make_spawnables.py    # mod/Mods/OARCommands/Scripts/spawnables.lua
 python tools/make_unlockables.py   # mod/Mods/OARCommands/Scripts/unlockables.lua
+python tools/make_maps.py          # mod/Mods/OARCommands/Scripts/maps.lua
 ```
+
+After a game update, run all five again: new heists, loot and items then show up in the lists,
+in `summon` and in `selectmap`.
 
 - `make_unlockables.py` reads each shop item's and skill's default values (`CashCost`,
   `CoinCost`, `SteamItemDefID`, `SkillComponent`) from the pak and refuses to write a table that
   contains anything with a coin price or a Steam item ID.
+- `make_maps.py` reads the lobby's heist entries (title, map file, coin price, Steam item ID)
+  and lists every other map file in the pak. A heist sold for coins is never put in the plain
+  map list, so `forcemap` always checks that you own it.
 
 - The game folder is found through Steam. Set `OAR_GAME_DIR` to override it.
 - `build_lists.py` also needs a UUU object and console variable dump (`UUU_ObjectsDump.txt`,

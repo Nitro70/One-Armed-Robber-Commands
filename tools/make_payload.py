@@ -46,6 +46,12 @@ def main():
             ours[os.path.relpath(full, MOD).replace(os.sep, "/")] = full
     if "Mods/OARCommands/binds.txt" in ours:
         raise SystemExit("mod/ contains a binds.txt; that is per-user data and must not ship")
+    config = "Mods/OARCommands/config.lua"
+    if config not in ours:
+        raise SystemExit("mod/ has no config.lua; the mod's commands live there")
+    for extra in ("Mods/OARCommands/config.default.lua", "Mods/OARCommands/config.old.lua"):
+        if extra in ours:
+            raise SystemExit(f"mod/ contains {extra}; the installer makes that file itself")
 
     with zipfile.ZipFile(UE4SS_ZIP) as src, zipfile.ZipFile(PAYLOAD, "w", zipfile.ZIP_DEFLATED) as out:
         for info in src.infolist():
@@ -54,6 +60,9 @@ def main():
             out.writestr(info.filename, src.read(info))
         for rel, full in sorted(ours.items()):
             out.write(full, rel)
+        # The untouched copy next to config.lua: for "reloadconfig default", and so an update can
+        # tell an edited config from an unedited one.
+        out.write(ours[config], "Mods/OARCommands/config.default.lua")
         out.write(os.path.join(REPO, "third_party", "UE4SS-LICENSE.txt"), "UE4SS-LICENSE.txt")
     with zipfile.ZipFile(PAYLOAD) as z:
         names = z.namelist()

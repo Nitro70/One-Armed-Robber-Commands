@@ -1,7 +1,7 @@
 ONE-ARMED ROBBER: FULL OBJECT LIST
 ==============================================================================
 Every Blueprint in the game files, from every map, read straight out of the pak.
-1277 classes (incl. 9 level scripts), 16 structs, contents of 52 maps.
+1283 classes (incl. 9 level scripts), 16 structs, contents of 53 maps.
 Engine (C++) classes are all in UUU_ObjectsDump.txt already (they live in the exe).
 
 Layout per class:  Name : Parent : Grandparent ...    /Game/path
@@ -2381,11 +2381,11 @@ ShieldAnimBP_C : AnimInstance    /Game/Animation/AnimBP/ShieldAnimBP
   func  EvaluateGraphExposedInputs_ExecuteUbergraph_ShieldAnimBP_AnimGraphNode_TwoBoneIK_4F97084142AC35DC4F8983ADAFB02FFF()
 
 
-BLUEPRINT CLASSES  [1155]
+BLUEPRINT CLASSES  [1161]
 ==============================================================================
 
 AlarmBP_C : Actor    /Game/BP/Utility/AlarmBP
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Small_Bank, TestMap, Tutorial_Loud
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Small_Bank, TestMap, Tutorial_Loud
   components  Audio (AudioComponent), DefaultSceneRoot (SceneComponent), HackableItemComponent (HackableItemComponent_C), Instructioncomponent (Instructioncomponent_C), StaticMesh (StaticMeshComponent)
   var   bool AlarmEnabled?   [replicated]
   var   delegate TriggerAlarmDisp
@@ -2904,7 +2904,7 @@ BoxDispenserFlap_C : Actor    /Game/BP/Setups/CardboardBoxes/BoxDispenserFlap
   func  ReceiveTick(float DeltaSeconds)   [Event]
 
 BP_AmbienceSoundController_C : Actor    /Game/BP/Sound/BP_AmbienceSoundController
-  maps        Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Small_Bank, TestMap
+  maps        Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Small_Bank, TestMap
   components  DefaultSceneRoot (SceneComponent)
   var   SoundBase* OutsideAmbience
   var   AudioComponent* AmbientSoundComponent
@@ -2919,7 +2919,7 @@ BP_AmbienceSoundController_C : Actor    /Game/BP/Sound/BP_AmbienceSoundControlle
   func  StopOutsideSound(PlayerCharacter_C* Player)
 
 BP_AmbientSoundZone_C : Actor    /Game/BP/Sound/BP_AmbientSoundZone
-  maps        Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_WineStore, Museum_night, Small_Bank
+  maps        Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_WineStore, Museum_night, Small_Bank
   components  Box (BoxComponent), DefaultSceneRoot (SceneComponent)
   var   array<AmbientSoundStruct> Sounds
   var   array<AudioComponent*> AudioComponents
@@ -2935,7 +2935,7 @@ BP_AmbientSoundZone_C : Actor    /Game/BP/Sound/BP_AmbientSoundZone
   func  StopSoundsOnAlarm()
 
 BP_AreaBoundsBlockingVolume_C : Actor    /Game/Assets/BPBuildingTools/BP_AreaBoundsBlockingVolume
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_ShadyWarehouse, Setup_UndergroundConstructionSite, SetupTestMap, Small_Bank, Small_Map_Presset, Tutorial_Loud, Tutorial_Stealth
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_ShadyWarehouse, Setup_UndergroundConstructionSite, SetupTestMap, Small_Bank, Small_Map_Presset, Tutorial_Loud, Tutorial_Stealth
   components  BlockingVolume (BoxComponent), Box (BoxComponent), DefaultSceneRoot (SceneComponent)
   func  PostProcessSettings(PlayerCharacter_C* self2, float Weight)
 
@@ -2959,7 +2959,7 @@ BP_BoxDispenser_C : Actor    /Game/BP/Setups/CardboardBoxes/BP_BoxDispenser
   func  SpawnBox()   [Server]
 
 BP_Button_C : Actor    /Game/BP/Puzzle/BP_Button
-  maps        Casino, Mansion_Car, Map_PostalOffice, Map_Setup_jewellery_1, Setup_PostalOffice, TestMap
+  maps        Casino, Mansion_Car, Map_AIDataCenter, Map_PostalOffice, Map_Setup_jewellery_1, Setup_PostalOffice, TestMap
   components  Button (StaticMeshComponent), DefaultSceneRoot (SceneComponent), InteractComponent (InteractComponent_C), StaticMesh1 (StaticMeshComponent)
   var   bool Activates?   [replicated]
   var   array<Actor*> Actors
@@ -3295,7 +3295,7 @@ BP_draggable_militaryCrate_RocketLauncher_C : BP_draggable_militaryCrate_C : Dra
   components  ChildActor (ChildActorComponent), ChildActor1 (ChildActorComponent), DefaultSceneRoot (SceneComponent)
 
 BP_DraggableExplosive_Base_C : DraggableItem_base_C : PickupItem_base_C : StaticMeshActor    /Game/BP/Explosives/BP_DraggableExplosive_Base
-  maps        Bar_drugs, Map_Harbour
+  maps        Bar_drugs, Map_AIDataCenter, Map_Harbour
   components  Box (BoxComponent), DefaultSceneRoot (SceneComponent), Explosive (ChildActorComponent), LookatInfoComponent (LookatInfoComponent_C), PickupItemComponent (PickupItemComponent_C), PickupPoint (ArrowComponent), Plane (StaticMeshComponent)
 
 BP_Exotic_Vehicle_C : Pawn    /Game/Assets/PolygonStreetRacer/Meshes/Vehicles_Rigged/BP_Exotic_Vehicle
@@ -3321,7 +3321,7 @@ BP_Explodable_Fence_C : BP_Explodable_Base_C : Actor    /Game/BP/Explosives/Expl
   components  DefaultSceneRoot (SceneComponent)
 
 BP_Explosive_Base_C : StaticMeshActor    /Game/BP/Explosives/BP_Explosive_Base
-  maps        Bar_drugs, Map_Harbour, Map_PostalOffice, SteamUpdateImage, TestMap
+  maps        Bar_drugs, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, SteamUpdateImage, TestMap
   components  AlertComponent (AlertComponent_C), BP_SoundOcclusionComponent (BP_SoundOcclusionComponent_C), DamageComponent (DamageComponent_C), DefaultSceneRoot (SceneComponent), NavModifier (NavModifierComponent), RadiusSphere (SphereComponent), SmoothSync (SmoothSync), Sound_FX_PropaneFire (AudioComponent)
   var   float ExplosionRadius
   var   int Health   [replicated]
@@ -3343,7 +3343,7 @@ BP_Explosive_Base_C : StaticMeshActor    /Game/BP/Explosives/BP_Explosive_Base
   func  ReceiveTick(float DeltaSeconds)   [Event]
 
 BP_Explosive_PropaneCan_C : BP_Explosive_Base_C : StaticMeshActor    /Game/BP/Explosives/BP_Explosive_PropaneCan
-  maps        Bar_drugs, Map_Harbour, SteamUpdateImage
+  maps        Bar_drugs, Map_AIDataCenter, Map_Harbour, SteamUpdateImage
   components  DefaultSceneRoot (SceneComponent)
 
 BP_Explosive_PropaneTank_C : BP_Explosive_Base_C : StaticMeshActor    /Game/BP/Explosives/BP_Explosive_PropaneTank
@@ -3370,7 +3370,7 @@ BP_FX_Rotating_fountain_C : Actor    /Game/Assets/PolygonCasino/FX/Blueprints/BP
   func  ReceiveBeginPlay()   [Event]
 
 BP_HackingPoint_C : Actor    /Game/BP/Hacking/BP_HackingPoint
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_WineStore, Museum_night, Small_Bank, TestMap, Tutorial_Stealth
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_WineStore, Museum_night, Small_Bank, TestMap, Tutorial_Stealth
   components  AlertComponent (AlertComponent_C), DefaultSceneRoot (SceneComponent), HoldingInteractComponent (HoldingInteractComponent_C), KeycardOverlapper (SphereComponent), PointLight (PointLightComponent), Sphere (SphereComponent), SpottedHighlightcomponent (SpottedHighlightcomponent_C), StaticMesh (StaticMeshComponent)
   var   array<Actor*> HackedActors
   var   bool CanOnlyHackOnce?
@@ -3388,7 +3388,7 @@ BP_HackingPoint_C : Actor    /Game/BP/Hacking/BP_HackingPoint
   func  UserConstructionScript()   [Event]
 
 BP_handscanner_C : Actor    /Game/BP/Puzzle/BP_handscanner
-  maps        Casino, Mansion_Car, TestMap
+  maps        Casino, Mansion_Car, Map_AIDataCenter, TestMap
   components  DefaultSceneRoot (SceneComponent), LookatInfoComponent (LookatInfoComponent_C), ScanStart (ArrowComponent), StaticMesh (StaticMeshComponent)
   var   array<Actor*> AcceptedActors
   var   array<Actor*> AffectedActors
@@ -3461,7 +3461,7 @@ BP_PasswordNote_C : PickupItem_base_C : StaticMeshActor    /Game/BP/Puzzle/Keypa
   func  SetPasswordText()   [Multicast]
 
 BP_Powerbox_C : Actor    /Game/BP/Hacking/BP_Powerbox
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_WineStore, Museum_night, Small_Bank, TestMap
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_WineStore, Museum_night, Small_Bank, TestMap
   components  Box (StaticMeshComponent), Burning (AudioComponent), CrossedWires (AudioComponent), Decal (DecalComponent), Decal1 (DecalComponent), DefaultSceneRoot (SceneComponent), Door (StaticMeshComponent), Instructioncomponent (Instructioncomponent_C), InteractComponent (InteractComponent_C), LookatInfoComponent (LookatInfoComponent_C), MoveToPoint (ArrowComponent), PowerboxFire (ParticleSystemComponent), PowerboxSparks (ParticleSystemComponent), Sphere (SphereComponent), SpottedHighlightcomponent (SpottedHighlightcomponent_C), SteamAchievementComponent (SteamAchievementComponent_C), SteamStatComponent (SteamStatComponent_C), UILocation (ArrowComponent), Wires (StaticMeshComponent)
   var   float DamageAmount   [replicated]
   var   float DestroyTime
@@ -3502,7 +3502,7 @@ BP_PowerboxSwitch_C : Actor    /Game/BP/Puzzle/PowerboxSwitch/BP_powerboxswitch
   func  DisableBox()   [Multicast]
 
 BP_PowerSwitch_C : Actor    /Game/BP/Utility/BP_PowerSwitch
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_WineStore, Museum_night, Small_Bank, TestMap, Tutorial_Stealth
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_WineStore, Museum_night, Small_Bank, TestMap, Tutorial_Stealth
   components  Box (StaticMeshComponent), DefaultSceneRoot (SceneComponent), HighlightOverlapper (SphereComponent), Instructioncomponent (Instructioncomponent_C), InteractComponent (InteractComponent_C), LookatInfoComponent (LookatInfoComponent_C), SpottedHighlightcomponent (SpottedHighlightcomponent_C), lever (StaticMeshComponent)
   var   string Name
   var   array<Actor*> AffectedActors
@@ -3594,7 +3594,7 @@ BP_SkinIconActor_C : Actor    /Game/BP/Guns/WeaponSkins/Icons/BP_SkinIconActor
   components  DefaultSceneRoot (SceneComponent), SkeletalMesh (SkeletalMeshComponent), SkeletalMesh1 (SkeletalMeshComponent)
 
 BP_Sky_Sphere_C : Actor    /Engine/EngineSky/BP_Sky_Sphere
-  maps        Bank, BankCutInHalf, Bar_drugs, Casino, CIA_Base, Demo, Demo_DanceClub_01, Demo_Dive_Bar_01, Demo_NightClub_01, Demo_Rooftop_Bar_01, Demo_Scene, Demonstration, Demonstration_Evening, ExampleMap, HighRise, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, MainMenu, Mansion_Car, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Overview, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_ShadyWarehouse, Setup_UndergroundConstructionSite, SetupTestMap, Small_Bank, Small_Map_Presset, SteamUpdateImage, TestMap, TestMap_empty, TikTokScene, Tutorial_Loud, Tutorial_Stealth
+  maps        Bank, BankCutInHalf, Bar_drugs, Casino, CIA_Base, Demo, Demo_DanceClub_01, Demo_Dive_Bar_01, Demo_NightClub_01, Demo_Rooftop_Bar_01, Demo_Scene, Demonstration, Demonstration_Evening, ExampleMap, HighRise, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, MainMenu, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Overview, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_ShadyWarehouse, Setup_UndergroundConstructionSite, SetupTestMap, Small_Bank, Small_Map_Presset, SteamUpdateImage, TestMap, TestMap_empty, TikTokScene, Tutorial_Loud, Tutorial_Stealth
   components  SkySphereMesh (StaticMeshComponent)
   var   SceneComponent* Base
   var   MaterialInstanceDynamic* Sky material
@@ -3725,7 +3725,7 @@ BP_Veh_Sports_01_Vehicle_C : Pawn    /Game/Assets/PolygonStreetRacer/Meshes/Vehi
   components  DefaultSceneRoot (SceneComponent), SK_Veh_Sports_01 (SkeletalMeshComponent), SK_Veh_Sports_01_Undercarriage_01 (SkeletalMeshComponent), SM_Veh_Attach_Tyre_06 (SkeletalMeshComponent), SM_Veh_Attach_Tyre_07 (SkeletalMeshComponent), SM_Veh_Attach_Tyre_08 (SkeletalMeshComponent), SM_Veh_Attach_Tyre_09 (SkeletalMeshComponent), SM_Veh_Attach_Wheel_22 (SkeletalMeshComponent), SM_Veh_Attach_Wheel_23 (SkeletalMeshComponent), SM_Veh_Attach_Wheel_24 (SkeletalMeshComponent), SM_Veh_Attach_Wheel_25 (SkeletalMeshComponent), SM_Veh_Sports_01_Bonnet_05 (SkeletalMeshComponent), SM_Veh_Sports_01_Fenders_02 (SkeletalMeshComponent), SM_Veh_Sports_01_Front_Bumper_02 (SkeletalMeshComponent), SM_Veh_Sports_01_Rear_Bumper_02 (SkeletalMeshComponent), SM_Veh_Sports_01_Rollcage_01 (SkeletalMeshComponent), SM_Veh_Sports_01_Roof_Scoop_01 (SkeletalMeshComponent), SM_Veh_Sports_01_Side_Skirts_01 (SkeletalMeshComponent), SM_Veh_Sports_01_Spoiler_02 (SkeletalMeshComponent)
 
 BP_Wall_C : Actor    /Game/Assets/BPBuildingTools/Building/BP_Wall
-  maps        Bank, BankCutInHalf, Bar_drugs, Casino, CIA_Base, HighRise, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Setup_ShadyWarehouse, Setup_UndergroundConstructionSite, Small_Bank, SteamUpdateImage, TestMap, TikTokScene
+  maps        Bank, BankCutInHalf, Bar_drugs, Casino, CIA_Base, HighRise, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Setup_ShadyWarehouse, Setup_UndergroundConstructionSite, Small_Bank, SteamUpdateImage, TestMap, TikTokScene
   components  DefaultSceneRoot (SceneComponent), InstancedStaticMesh (InstancedStaticMeshComponent)
   var   int Length
   var   StaticMesh* Wallmesh
@@ -3749,7 +3749,7 @@ BreakableDisplaycase_C : Actor    /Game/BP/Utility/BreakableDisplaycase
   func  ReceiveBeginPlay()   [Event]
 
 BreakableGlass_C : Actor    /Game/BP/Utility/BreakableGlass
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, MainMenu, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_MilitaryBase, Setup_PostalOffice, Setup_ShadyWarehouse, Small_Bank, TestMap, Tutorial_Loud
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, MainMenu, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_MilitaryBase, Setup_PostalOffice, Setup_ShadyWarehouse, Small_Bank, TestMap, Tutorial_Loud
   components  AlertComponent (AlertComponent_C), BP_SoundOcclusionComponent (BP_SoundOcclusionComponent_C), DamageComponent (DamageComponent_C), DefaultSceneRoot (SceneComponent), Glass (StaticMeshComponent), NavModifier (NavModifierComponent), Niagara (NiagaraComponent)
   var   SoundBase* BreakSound
   var   bool 2HitBreak?   [replicated]
@@ -3768,7 +3768,7 @@ BreakableGlass_C : Actor    /Game/BP/Utility/BreakableGlass
   func  UserConstructionScript()   [Event]
 
 BreakableGlass_Interact_C : BreakableGlass_C : Actor    /Game/BP/Utility/BreakableGlass_Interact
-  maps        CIA_Base, Mansion_Car, Map_PostalOffice, Map_Setup_jewellery_1, Map_WineStore, Setup_PostalOffice, Small_Bank
+  maps        CIA_Base, Mansion_Car, Map_AIDataCenter, Map_PostalOffice, Map_Setup_jewellery_1, Map_WineStore, Setup_PostalOffice, Small_Bank
   components  DefaultSceneRoot (SceneComponent), Glass (StaticMeshComponent), InteractComponent (InteractComponent_C), LookatInfoComponent (LookatInfoComponent_C), NavModifier (NavModifierComponent), Niagara (NiagaraComponent)
 
 Bridge_C : Actor    /Game/Assets/BPBuildingTools/Env/Bridge
@@ -3810,7 +3810,7 @@ C4_C : PickupItem_base_C : StaticMeshActor    /Game/BP/Items/C4
   func  UserConstructionScript()   [Event]
 
 CameraBP_C : Pawn    /Game/BP/Camera/CameraBP
-  maps        Bank, BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, HighRise, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Small_Bank, TestMap, TikTokScene, Tutorial_Stealth
+  maps        Bank, BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, HighRise, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Small_Bank, TestMap, TikTokScene, Tutorial_Stealth
   components  AlertComponent (AlertComponent_C), Arrow (ArrowComponent), Camera (CameraComponent), CameraArm (StaticMeshComponent), CameraHead (StaticMeshComponent), CameraViewCollision (StaticMeshComponent), DamageComponent (DamageComponent_C), DefaultSceneRoot (SceneComponent), ParticleSystem (ParticleSystemComponent), PointLight (PointLightComponent), SpotPlayerComponent (SpotPlayerComponent_C), SpottedHighlightcomponent (SpottedHighlightcomponent_C)
   var   bool Roofcam?
   var   Rotator CamStartRotation
@@ -3850,7 +3850,7 @@ CameraBP_C : Pawn    /Game/BP/Camera/CameraBP
   func  UserConstructionScript()   [Event]
 
 CameraController_C : Actor    /Game/BP/Camera/CameraController
-  maps        Bank, Bar_drugs, Casino, CIA_Base, ExampleMap, HighRise, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Setup_ShadyWarehouse, Small_Bank, TikTokScene, Tutorial_Stealth
+  maps        Bank, Bar_drugs, Casino, CIA_Base, ExampleMap, HighRise, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Setup_ShadyWarehouse, Small_Bank, TikTokScene, Tutorial_Stealth
   components  DefaultSceneRoot (SceneComponent), InteractComponent (InteractComponent_C), LookatInfoComponent (LookatInfoComponent_C), SceneCaptureComponent2D (SceneCaptureComponent2D), SceneCaptureComponent2D1 (SceneCaptureComponent2D), SceneCaptureComponent2D2 (SceneCaptureComponent2D), StaticMesh (StaticMeshComponent), StaticMesh1 (StaticMeshComponent), StaticMesh2 (StaticMeshComponent), StaticMesh3 (StaticMeshComponent)
   func  CamUpdate()   [Server]
   func  PossesCamera(PlayerCharacter_C* Player)   [Server]
@@ -3909,7 +3909,7 @@ CinemaIKtarget_C : Actor    /Game/BP/NPC/Cinema/CinemaIKtarget
   components  DefaultSceneRoot (SceneComponent)
 
 Civilian_NPC_C : NPCBase_C : Character    /Game/BP/NPC/Civilian_NPC
-  maps        Bank, BankCutInHalf, Bar_drugs, Casino, CIA_Base, HighRise, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Small_Bank, TestMap, Tutorial_Stealth
+  maps        Bank, BankCutInHalf, Bar_drugs, Casino, CIA_Base, HighRise, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Map_AIDataCenter, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Small_Bank, TestMap, Tutorial_Stealth
   components  AlertComponent (AlertComponent_C), DefaultSceneRoot (SceneComponent), HairActor (ChildActorComponent), HairMesh (StaticMeshComponent), InteractComponent (InteractComponent_C), LookAtOverlapper (SphereComponent), LookatInfoComponent (LookatInfoComponent_C), PantsActor (ChildActorComponent), PawnNoiseEmitter (PawnNoiseEmitterComponent), PawnSensing (PawnSensingComponent), PickupItemComponent (PickupItemComponent_C), RagdollPickupComponent (HeavyPickupComponent_C), ShirtActor (ChildActorComponent), ShoeActor (ChildActorComponent), SpotPlayerComponent (SpotPlayerComponent_C), SpottedHighlightcomponent (SpottedHighlightcomponent_C)
   var   float LookAtLerpTimeline_Alpha_7E6FDB694CE6CDCE12BD11979A8724AB
   var   byte<ETimelineDirection> LookAtLerpTimeline__Direction_7E6FDB694CE6CDCE12BD11979A8724AB
@@ -4084,7 +4084,7 @@ DisplayBreakableGlassTop_C : BreakableGlass_C : Actor    /Game/BP/Utility/Displa
 DmgTypeBP_Environmental_C : DamageType    /Engine/EngineDamageTypes/DmgTypeBP_Environmental
 
 DoorBP_C : Actor    /Game/BP/Utility/DoorBP
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, HighRise, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_ShadyWarehouse, Small_Bank, TestMap, TikTokScene, Tutorial_Loud, Tutorial_Stealth
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, HighRise, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_ShadyWarehouse, Small_Bank, TestMap, TikTokScene, Tutorial_Loud, Tutorial_Stealth
   components  AlertComponent (AlertComponent_C), Arrow (ArrowComponent), BP_SoundOcclusionComponent (BP_SoundOcclusionComponent_C), Box (BoxComponent), DamageComponent (DamageComponent_C), DefaultSceneRoot (SceneComponent), Door (StaticMeshComponent), DoorFloor (ArrowComponent), HackableItemComponent (HackableItemComponent_C), InteractComponent (InteractComponent_C), LockpickComponent (LockpickComponent_C), LookatInfoComponent (LookatInfoComponent_C), NavCorrecter (BoxComponent), NavModifier (NavModifierComponent), Overlaper (BoxComponent), handle (ArrowComponent)
   var   StaticMesh* DoorMesh   [replicated]
   var   bool Open?   [replicated]
@@ -4121,11 +4121,11 @@ DoorBP_C : Actor    /Game/BP/Utility/DoorBP
   func  UserConstructionScript()   [Event]
 
 DoorBP_Locked_Alarm_C : DoorBP_C : Actor    /Game/BP/Utility/DoorBP_Locked_Alarm
-  maps        Bar_drugs, Casino, CIA_Base, JewelleryStore, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_WineStore, TestMap, Tutorial_Stealth
+  maps        Bar_drugs, Casino, CIA_Base, JewelleryStore, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_WineStore, TestMap, Tutorial_Stealth
   components  DefaultSceneRoot (SceneComponent), Door (StaticMeshComponent), Lock (ChildActorComponent), Lock1 (ChildActorComponent), LookatInfoComponent (LookatInfoComponent_C)
 
 DoorBP_Locked_C : DoorBP_C : Actor    /Game/BP/Utility/DoorBP_Locked
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Small_Bank, TestMap, Tutorial_Loud, Tutorial_Stealth
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Small_Bank, TestMap, Tutorial_Loud, Tutorial_Stealth
   components  DefaultSceneRoot (SceneComponent), Door (StaticMeshComponent), Lock (ChildActorComponent), Lock1 (ChildActorComponent), LookatInfoComponent (LookatInfoComponent_C), UnlockSide (ChildActorComponent)
   func  DisableUnlockCollision()   [Multicast]
   func  ExplodeDoor(Actor* Instigator)   [Server]
@@ -4152,7 +4152,7 @@ DrillBP_Tutorial_C : DrillBP_C : PickupItem_base_C : StaticMeshActor    /Game/BP
   components  DefaultSceneRoot (SceneComponent), ToolComponent (ToolComponent_C)
 
 Duffelbag_C : PickupItem_base_C : StaticMeshActor    /Game/BP/Items/Duffelbag
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, HighRise, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, MainMenu, Mansion_Car, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_ShadyWarehouse, SetupTestMap, Small_Bank, Small_Map_Presset, SteamUpdateImage, TestMap, TestMap_empty, TikTokScene, Tutorial_Stealth
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, HighRise, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, MainMenu, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_ShadyWarehouse, SetupTestMap, Small_Bank, Small_Map_Presset, SteamUpdateImage, TestMap, TestMap_empty, TikTokScene, Tutorial_Stealth
   components  Box (BoxComponent), Box1 (BoxComponent), DefaultSceneRoot (SceneComponent), DuffelbagStuckComponent (DuffelbagStuckComponent_C), Duffelbag_Straps (SkeletalMeshComponent), Duffelbag_Straps1 (SkeletalMeshComponent), HighlightInRangeComponent (HighlightInRangeComponent_C), LookatInfoComponent (LookatInfoComponent_C), PickupItemComponent (PickupItemComponent_C)
   var   array<Actor*> AttachedActors   [replicated]
   func  AttachMoney(Actor* Player)   [Multicast]
@@ -4207,7 +4207,7 @@ EmoteBPBase_MakeItRain_C : EmoteBPBase_C : Actor    /Game/Animation/Emote/EmoteB
   components  DefaultSceneRoot (SceneComponent), ParticleSystem (ParticleSystemComponent), StaticMesh (StaticMeshComponent)
 
 EndOfTruck_Default_C : EndOfTruckBase_C : Actor    /Game/BP/Player/EquipmentShelf/EndOfTruck/EndOfTruck_Default
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_ShadyWarehouse, SetupTestMap, Small_Bank, Small_Map_Presset, SteamUpdateImage, TestMap, TestMap_empty, TikTokScene, Tutorial_Loud, Tutorial_Stealth
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_ShadyWarehouse, SetupTestMap, Small_Bank, Small_Map_Presset, SteamUpdateImage, TestMap, TestMap_empty, TikTokScene, Tutorial_Loud, Tutorial_Stealth
   components  Box (StaticMeshComponent), Box1 (StaticMeshComponent), Box2 (StaticMeshComponent), DefaultSceneRoot (SceneComponent), Lamp (StaticMeshComponent), Lamp1 (StaticMeshComponent), Table1 (StaticMeshComponent), Table10 (StaticMeshComponent), Table11 (StaticMeshComponent), Table12 (StaticMeshComponent), Table13 (StaticMeshComponent), Table14 (StaticMeshComponent), Table15 (StaticMeshComponent), Table16 (StaticMeshComponent), Table17 (StaticMeshComponent), Table18 (StaticMeshComponent), Table19 (StaticMeshComponent), Table2 (StaticMeshComponent), Table20 (StaticMeshComponent), Table21 (StaticMeshComponent), Table22 (StaticMeshComponent), Table8 (StaticMeshComponent), Table9 (StaticMeshComponent), TextRender (TextRenderComponent)
 
 EndOfTruckBase_C : Actor    /Game/BP/Player/EquipmentShelf/EndOfTruck/EndOfTruckBase
@@ -4248,7 +4248,7 @@ Equipmentshelf_equipment_EMP_C : Equipmentshelf_equipment_base_C : Actor    /Gam
   components  C5 (ChildActorComponent), C6 (ChildActorComponent), C7 (ChildActorComponent), DefaultSceneRoot (SceneComponent)
 
 Equipmentshelf_equipment_Empty_C : Equipmentshelf_equipment_base_C : Actor    /Game/BP/Player/EquipmentShelf/Equipmentshelf_equipment_Empty
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_ShadyWarehouse, SetupTestMap, Small_Bank, Small_Map_Presset, SteamUpdateImage, TestMap, TestMap_empty, TikTokScene, Tutorial_Loud, Tutorial_Stealth
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_ShadyWarehouse, SetupTestMap, Small_Bank, Small_Map_Presset, SteamUpdateImage, TestMap, TestMap_empty, TikTokScene, Tutorial_Loud, Tutorial_Stealth
   components  DefaultSceneRoot (SceneComponent), SM_Prop_CardboardBox_01 (StaticMeshComponent), SM_Prop_CardboardBox_02 (StaticMeshComponent), SM_Prop_CardboardBox_03 (StaticMeshComponent), SM_Prop_CardboardBox_04 (StaticMeshComponent)
   var   array<StaticMesh*> Meshes
   func  RandomizeProps()
@@ -4267,7 +4267,7 @@ Equipmentshelf_equipment_StickyDrill_C : Equipmentshelf_equipment_base_C : Actor
   components  DefaultSceneRoot (SceneComponent), Drill (ChildActorComponent)
 
 EquipmentShelf_shelf_C : Actor    /Game/BP/Player/EquipmentShelf/EquipmentShelf_shelf
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_ShadyWarehouse, SetupTestMap, Small_Bank, Small_Map_Presset, SteamUpdateImage, TestMap, TestMap_empty, TikTokScene, Tutorial_Stealth
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_ShadyWarehouse, SetupTestMap, Small_Bank, Small_Map_Presset, SteamUpdateImage, TestMap, TestMap_empty, TikTokScene, Tutorial_Stealth
   components  Arrow (ArrowComponent), DefaultSceneRoot (SceneComponent), Duffelbag (ChildActorComponent), Shelf (StaticMeshComponent), Shelf_Bot (ChildActorComponent), Shelf_Mid (ChildActorComponent), Shelf_Top (ChildActorComponent)
   var   bool Taken?   [replicated]
   var   int ShelfNumber
@@ -4278,8 +4278,32 @@ Explosive_NoMesh_C : BP_Explosive_Base_C : StaticMeshActor    /Game/BP/Explosive
 ExplosiveInterface_C : Interface    /Game/BP/Explosives/ExplosiveInterface
   func  OnExploded(int Damage)
 
+FanSpinner_BP_C : Actor    /Game/BP/Utility/FanSpinner_BP
+  maps        Map_AIDataCenter
+  components  AudioFanLocation (BillboardComponent), Billboard (BillboardComponent), DefaultSceneRoot (SceneComponent)
+  var   float StopRotationTimeline_LerpAlpha_86739F1749A9F5F32C073880CEF1E370
+  var   byte<ETimelineDirection> StopRotationTimeline__Direction_86739F1749A9F5F32C073880CEF1E370
+  var   TimelineComponent* StopRotationTimeline
+  var   float RotationTimeline_Alpha_66CD09D64D6078F52920D1ADE4F22174
+  var   byte<ETimelineDirection> RotationTimeline__Direction_66CD09D64D6078F52920D1ADE4F22174
+  var   TimelineComponent* RotationTimeline
+  var   array<Actor*> Fans
+  var   float StartRotation
+  var   float TargetStopRotation
+  var   AudioComponent* AudioFansSpinning   [replicated]
+  var   AudioComponent* AudioFansShutdown   [replicated]
+  func  Activate()
+  func  Deactivate()
+  func  ReceiveBeginPlay()   [Event]
+  func  Reset()
+  func  RotationTimeline__FinishedFunc()
+  func  RotationTimeline__UpdateFunc()
+  func  ShutDownFans()   [Server]
+  func  StopRotationTimeline__FinishedFunc()
+  func  StopRotationTimeline__UpdateFunc()
+
 Floor_C : Actor    /Game/BP/BuildingBPS/Floor
-  maps        Bank, HighRise, Map_Harbour, Setup_ShadyWarehouse
+  maps        Bank, HighRise, Map_AIDataCenter, Map_Harbour, Setup_ShadyWarehouse
   components  DefaultSceneRoot (SceneComponent)
   var   StaticMesh* Mesh
   var   MaterialInterface* material
@@ -4289,7 +4313,7 @@ Floor_C : Actor    /Game/BP/BuildingBPS/Floor
   func  UserConstructionScript()   [Event]
 
 Floor_Ceiling_C : BP_Wall_C : Actor    /Game/Assets/BPBuildingTools/Building/Floor_Ceiling
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, MainMenu, Mansion_Car, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_PostalOffice, Setup_UndergroundConstructionSite, Small_Bank, SteamUpdateImage, TestMap, TikTokScene, Tutorial_Loud, Tutorial_Stealth
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, MainMenu, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_PostalOffice, Setup_UndergroundConstructionSite, Small_Bank, SteamUpdateImage, TestMap, TikTokScene, Tutorial_Loud, Tutorial_Stealth
   components  DefaultSceneRoot (SceneComponent), InstancedStaticMesh (InstancedStaticMeshComponent)
   var   float FloorDimension
   var   int Width
@@ -4311,13 +4335,12 @@ Floor_Ceiling_Random_C : Actor    /Game/Assets/BPBuildingTools/Building/Floor_Ce
   func  UserConstructionScript()   [Event]
 
 GarageDoor_C : Actor    /Game/BP/Puzzle/GarageDoor
-  maps        Casino, Mansion_Car, Map_Harbour, Map_PostalOffice, TestMap
+  maps        Casino, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, TestMap
   components  DefaultSceneRoot (SceneComponent), HackableItemComponent (HackableItemComponent_C), NavModifier (NavModifierComponent), OpenLocation (ArrowComponent), StaticMesh (StaticMeshComponent)
   var   bool Open?   [replicated]
   var   bool Opening?   [replicated]
   var   float OpenTime
   var   float AfterOpenCloseDelay
-  var   bool IsUsingRotation
   func  Activate()
   func  Deactivate()
   func  ForceClose()   [Multicast]
@@ -4358,14 +4381,14 @@ Guard_patrolRoute_C : Actor    /Game/BP/NPC/Guard_patrolRoute
   func  UserConstructionScript()   [Event]
 
 GuardEscortPoint_C : Actor    /Game/BP/NPC/GuardEscortPoint
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, JewelleryStore, Knightsbridge_day, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Small_Bank, TestMap
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, JewelleryStore, Knightsbridge_day, Map_AIDataCenter, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Small_Bank, TestMap
   components  DefaultSceneRoot (SceneComponent)
 
 GuardInterface_C : Interface    /Game/BP/NPC/GuardInterface
   func  FindNearestGuardAsActor(Actor* GuardActor, float Distance)
 
 Guardmanager_C : Actor    /Game/BP/NPC/Guardmanager
-  maps        Bar_drugs, Casino, CIA_Base, ExampleMap, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_UndergroundConstructionSite, SetupTestMap, Small_Bank, Small_Map_Presset, TestMap, TikTokScene, Tutorial_Loud, Tutorial_Stealth
+  maps        Bar_drugs, Casino, CIA_Base, ExampleMap, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_UndergroundConstructionSite, SetupTestMap, Small_Bank, Small_Map_Presset, TestMap, TikTokScene, Tutorial_Loud, Tutorial_Stealth
   components  DefaultSceneRoot (SceneComponent)
   var   delegate TriggerAlarm
   var   array<Actor*> DeadNPCS
@@ -4378,7 +4401,7 @@ Guardmanager_C : Actor    /Game/BP/NPC/Guardmanager
   func  TriggerAlarm__DelegateSignature()
 
 GuardPatrolPoint_C : Actor    /Game/BP/NPC/GuardPatrolPoint
-  maps        Bar_drugs, Casino, CIA_Base, ExampleMap, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Small_Bank
+  maps        Bar_drugs, Casino, CIA_Base, ExampleMap, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Small_Bank
   components  Arrow (ArrowComponent), DefaultSceneRoot (SceneComponent), Sphere (StaticMeshComponent)
   var   NPC_Guard_C* PatrollingGuard
   var   int PointNumber   [replicated]
@@ -4407,7 +4430,7 @@ GuardPhone_C : PickupItem_base_C : StaticMeshActor    /Game/BP/Hacking/GuardPhon
   func  StopPhoneAlert()   [Server]
 
 GuardScanPoint_C : Actor    /Game/BP/Hacking/GuardScanPoint
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Small_Bank, TestMap, Tutorial_Stealth
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Small_Bank, TestMap, Tutorial_Stealth
   components  AlertComponent (AlertComponent_C), Box (BoxComponent), DefaultSceneRoot (SceneComponent), SpottedHighlightcomponent (SpottedHighlightcomponent_C), StaticMesh (StaticMeshComponent)
   var   bool Activated?   [replicated]
   func  OverlapMulti()   [Multicast]
@@ -4596,6 +4619,10 @@ Instruction_Casino_C : Instruction_base_C : Actor    /Game/BP/Instructions/Maps/
   maps        Casino
   components  DefaultSceneRoot (SceneComponent)
 
+Instruction_DataCenter_C : Instruction_base_C : Actor    /Game/BP/Instructions/Maps/Instruction_DataCenter
+  maps        Map_AIDataCenter
+  components  DefaultSceneRoot (SceneComponent)
+
 Instruction_FIA_base_C : Instruction_base_C : Actor    /Game/BP/Instructions/Maps/Instruction_FIA_base
   maps        CIA_Base
   components  DefaultSceneRoot (SceneComponent)
@@ -4656,7 +4683,7 @@ InstructionInterface_C : Interface    /Game/BP/Instructions/InstructionInterface
   func  OverrideInstruction()
 
 InstructionOverlapper_C : Actor    /Game/BP/Instructions/InstructionOverlapper
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Museum_night, Small_Bank, TestMap, Tutorial_Loud, Tutorial_Stealth
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Museum_night, Small_Bank, TestMap, Tutorial_Loud, Tutorial_Stealth
   components  Box (BoxComponent), DefaultSceneRoot (SceneComponent), Instructioncomponent (Instructioncomponent_C)
   func  ReceiveActorBeginOverlap(Actor* OtherActor)   [Event]
 
@@ -4665,7 +4692,7 @@ InteractComponent_C : ActorComponent    /Game/BP/Component/InteractComponent
   func  Interact__DelegateSignature(Actor* Player, PrimitiveComponent* HitComponent)
 
 Item_Keycard_C : PickupItem_base_C : StaticMeshActor    /Game/BP/Hacking/Item_Keycard
-  maps        Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_WineStore, Museum_night, Small_Bank, TestMap, Tutorial_Stealth
+  maps        Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_WineStore, Museum_night, Small_Bank, TestMap, Tutorial_Stealth
   components  DefaultSceneRoot (SceneComponent), HighlightInRangeComponent (HighlightInRangeComponent_C), HighlightWhenHolding (HighlightWhenHolding_C), LookatInfoComponent (LookatInfoComponent_C)
   var   int KeycardNumber   [replicated]
   var   string Keycard name
@@ -4676,7 +4703,7 @@ Item_Keycard_C : PickupItem_base_C : StaticMeshActor    /Game/BP/Hacking/Item_Ke
   func  UserConstructionScript()   [Event]
 
 Item_OpenableBox_closed_C : PickupItem_base_C : StaticMeshActor    /Game/BP/Setups/CardboardBoxes/Item_OpenableBox_closed
-  maps        Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Setup_jewellery_1, Setup_PostalOffice
+  maps        Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Setup_jewellery_1, Setup_PostalOffice
   components  Box (BoxComponent), Box1 (BoxComponent), Box2 (BoxComponent), DefaultSceneRoot (SceneComponent), LookatInfoComponent (LookatInfoComponent_C), PickupItemComponent (PickupItemComponent_C)
   var   int OpenProgress   [replicated]
   func  AddOpenProgress(Actor* Actor)   [Server]
@@ -4684,7 +4711,7 @@ Item_OpenableBox_closed_C : PickupItem_base_C : StaticMeshActor    /Game/BP/Setu
   func  SetBoxOwner(Actor* Actor)   [Multicast]
 
 Item_OpenableBox_CustomItems_C : PickupItem_base_C : StaticMeshActor    /Game/BP/Setups/CardboardBoxes/Item_OpenableBox_CustomItems
-  maps        Map_PostalOffice
+  maps        Map_AIDataCenter, Map_PostalOffice
   components  Box (BoxComponent), Box1 (BoxComponent), Box2 (BoxComponent), DefaultSceneRoot (SceneComponent), FX_BoxOpen (ParticleSystemComponent), LookatInfoComponent (LookatInfoComponent_C), PickupItemComponent (PickupItemComponent_C), Sound_FX_CardboardBoxOpen (AudioComponent), SpawnLocation (ArrowComponent)
   var   int OpenProgress   [replicated]
   var   array<class<Actor>> Items
@@ -4782,7 +4809,7 @@ LaserSensor_C : Actor    /Game/BP/Utility/LaserSensor
   components  DefaultSceneRoot (SceneComponent)
 
 LeaveButton_C : Actor    /Game/BP/Player/LeaveButton
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_WineStore, Museum_night, Small_Bank, Small_Map_Presset, SteamUpdateImage, TestMap, TestMap_empty, TikTokScene, Tutorial_Loud, Tutorial_Stealth
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_WineStore, Museum_night, Small_Bank, Small_Map_Presset, SteamUpdateImage, TestMap, TestMap_empty, TikTokScene, Tutorial_Loud, Tutorial_Stealth
   components  ButtonMesh (StaticMeshComponent), DefaultSceneRoot (SceneComponent), InteractComponent (InteractComponent_C), LookatInfoComponent (LookatInfoComponent_C), SpottedHighlightcomponent (SpottedHighlightcomponent_C), SteamAchievementComponent (SteamAchievementComponent_C), SteamStatComponent_HeistLoud (SteamStatComponent_C), SteamStatComponent_HeistStealth (SteamStatComponent_C), SteamStatComponent_cash (SteamStatComponent_C)
   var   RobberTruck_C* As Robber Truck   [replicated]
   var   float ValueableEXP   [replicated]
@@ -4819,11 +4846,11 @@ LobbyManager_C : Actor    /Game/Maps/Menu/BP/LobbyManager
   func  SetFocusedSetup(class<Setup_base_C> Setup)   [Multicast]
 
 Lock_Alarm_C : Lock_C : Actor    /Game/BP/Utility/Lock_Alarm
-  maps        Bar_drugs, Casino, CIA_Base, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_WineStore, Museum_night, Small_Bank, TestMap, Tutorial_Stealth
+  maps        Bar_drugs, Casino, CIA_Base, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_WineStore, Museum_night, Small_Bank, TestMap, Tutorial_Stealth
   components  DefaultSceneRoot (SceneComponent), SpottedHighlightcomponent (SpottedHighlightcomponent_C), ToolSpotChild (ChildActorComponent)
 
 Lock_C : Actor    /Game/BP/Utility/Lock
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Small_Bank, TestMap, Tutorial_Loud, Tutorial_Stealth
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Small_Bank, TestMap, Tutorial_Loud, Tutorial_Stealth
   components  AlertComponent (AlertComponent_C), AttractPoint (ArrowComponent), DefaultSceneRoot (SceneComponent), Lock (StaticMeshComponent), LookatInfoComponent (LookatInfoComponent_C), PhysicsHandle (PhysicsHandleComponent), Sphere (SphereComponent), SpottedHighlightcomponent (SpottedHighlightcomponent_C), SteamStatComponent (SteamStatComponent_C), ToolOwnerComponent (ToolOwnerComponent_C), ToolSpotChild (ChildActorComponent)
   var   StaticMesh* Lock mesh
   var   Lock_pick_C* Tool   [replicated]
@@ -4847,7 +4874,7 @@ Lock_pick_Advanced_C : Lock_pick_C : PickupItem_base_C : StaticMeshActor    /Gam
   components  Attach location (ArrowComponent), DefaultSceneRoot (SceneComponent), LookatInfoComponent (LookatInfoComponent_C)
 
 Lock_pick_C : PickupItem_base_C : StaticMeshActor    /Game/BP/Items/Lock_pick
-  maps        Map_PostalOffice, Setup_ShadyWarehouse, TestMap, Tutorial_Loud
+  maps        Map_AIDataCenter, Map_PostalOffice, Setup_ShadyWarehouse, TestMap, Tutorial_Loud
   components  Attach location (ArrowComponent), DefaultSceneRoot (SceneComponent), HighlightInRangeComponent (HighlightInRangeComponent_C), HighlightWhenHolding (HighlightWhenHolding_C), LookatInfoComponent (LookatInfoComponent_C), PickupItemComponent (PickupItemComponent_C), SusItemComponent (SusItemComponent_C)
   var   Lock_C* Lock   [replicated]
   var   bool Picking?   [replicated]
@@ -5180,7 +5207,7 @@ MenuWeaponBoard_C : Actor    /Game/Maps/Menu/BP/Shop/PhysicalItems/MenuWeaponBoa
   func  UserConstructionScript()   [Event]
 
 MetalDetector_C : Actor    /Game/BP/Utility/MetalDetector
-  maps        Bank, BankCutInHalf, CIA_Base, Knightsbridge_day, Map_PostalOffice
+  maps        Bank, BankCutInHalf, CIA_Base, Knightsbridge_day, Map_AIDataCenter, Map_PostalOffice
   components  Box (BoxComponent), DefaultSceneRoot (SceneComponent), StaticMesh (StaticMeshComponent)
   func  StartMetalAlarm()   [Multicast]
 
@@ -5249,7 +5276,7 @@ NPC_Cinema_C : Civilian_NPC_C : NPCBase_C : Character    /Game/BP/NPC/Cinema/NPC
   func  UserConstructionScript()   [Event]
 
 NPC_Civilian_CustomClothes_C : Civilian_NPC_C : NPCBase_C : Character    /Game/BP/NPC/NPC_Civilian_CustomClothes
-  maps        Bank, Casino, Mansion_Car, Map_Harbour, Map_NewsStation, Map_PostalOffice, TestMap
+  maps        Bank, Casino, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_NewsStation, Map_PostalOffice, TestMap
   components  DefaultSceneRoot (SceneComponent), HatActor (ChildActorComponent)
   var   SkeletalMesh* NPCOutfit
   var   class<Mask_base_C> CustomHat
@@ -5258,7 +5285,7 @@ NPC_Civilian_CustomClothes_C : Civilian_NPC_C : NPCBase_C : Character    /Game/B
   func  UserConstructionScript()   [Event]
 
 NPC_Guard_C : NPCBase_C : Character    /Game/BP/NPC/NPC_Guard
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Small_Bank, SteamUpdateImage, TestMap, Tutorial_Loud, Tutorial_Stealth
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Small_Bank, SteamUpdateImage, TestMap, Tutorial_Loud, Tutorial_Stealth
   components  AlertComponent (AlertComponent_C), Arrow1 (ArrowComponent), DefaultSceneRoot (SceneComponent), EscortRing (StaticMeshComponent), EscortSphere (SphereComponent), EscortSpring (SpringArmComponent), GunBP (ChildActorComponent), GunLocation (ArrowComponent), Hat (StaticMeshComponent), PawnSensing (PawnSensingComponent), PhoneSpawnArrow (ArrowComponent), PhysicsConstraint (PhysicsConstraintComponent), PickupItemComponent (PickupItemComponent_C), RagdollPickupComponent (HeavyPickupComponent_C), SenseActor (ChildActorComponent), Sphere (SphereComponent), SpotPlayerComponent (SpotPlayerComponent_C), SpottedHighlightcomponent (SpottedHighlightcomponent_C), SteamStatComponent (SteamStatComponent_C)
   var   float Timeline_0_Alpha_3B178F704D255F5D3990C2837E28D2EF
   var   byte<ETimelineDirection> Timeline_0__Direction_3B178F704D255F5D3990C2837E28D2EF
@@ -5467,6 +5494,7 @@ NPC_PowerboxDefuser_C : NPCBase_C : Character    /Game/BP/NPC/Police/NPC_Powerbo
   func  OnFail_3509034549C3312B5217008101EAB530(byte<EPathFollowingResult> MovementResult)
   func  OnSuccess_1257E76C4D301D8096FB3EBDACA4EE95(byte<EPathFollowingResult> MovementResult)
   func  OnSuccess_3509034549C3312B5217008101EAB530(byte<EPathFollowingResult> MovementResult)
+  func  PowerboxFinished_Event_0()
   func  ReceiveBeginPlay()   [Event]
   func  StartWarningPowerBox()   [Multicast]
 
@@ -5672,7 +5700,7 @@ ParkingLot3_C : Actor    /Game/Assets/BPBuildingTools/Env/ParkingLot3
   components  DefaultSceneRoot (SceneComponent), SM_Env_Sidewalk_Straight_10_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_11_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_15_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_19_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_22_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_23_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_24_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_34_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_39_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_40_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_43_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_44_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_47_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_48_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_4_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_5_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_6_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_8_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_9_StaticMeshComponent0 (StaticMeshComponent), SharedRoot (SceneComponent)
 
 ParkingLot_C : Actor    /Game/Assets/BPBuildingTools/Env/ParkingLot
-  maps        BankCutInHalf, Bar_drugs, CIA_Base, JewelleryStore, Knightsbridge_day, Map_PostalOffice, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Setup_UndergroundConstructionSite, SetupTestMap, Small_Bank, Small_Map_Presset
+  maps        BankCutInHalf, Bar_drugs, CIA_Base, JewelleryStore, Knightsbridge_day, Map_AIDataCenter, Map_PostalOffice, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Setup_UndergroundConstructionSite, SetupTestMap, Small_Bank, Small_Map_Presset
   components  DefaultSceneRoot (SceneComponent), SM_Env_Sidewalk_Straight_10_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_11_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_12_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_14_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_15_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_19_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_20_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_21_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_22_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_23_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_24_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_26_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_33_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_34_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_35_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_36_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_37_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_38_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_39_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_40_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_41_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_42_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_43_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_44_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_45_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_46_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_47_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_48_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_4_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_5_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_6_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_7_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_8_StaticMeshComponent0 (StaticMeshComponent), SM_Env_Sidewalk_Straight_9_StaticMeshComponent0 (StaticMeshComponent), SharedRoot (SceneComponent)
 
 PickupItem_base_C : StaticMeshActor    /Game/BP/Items/PickupItem_base
@@ -6024,7 +6052,7 @@ PlayerSpawnSpot_C : Actor    /Game/Maps/Menu/BP/Players/PlayerSpawnSpot
   func  SpawnPlayerInSpot(MainMenuPlayer_C* Player)   [Server]
 
 PoliceGun_Glock_C : PoliceGunBase_C : Actor    /Game/BP/NPC/PoliceGuns/PoliceGun_Glock
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Small_Bank, SteamUpdateImage, TestMap, Tutorial_Loud, Tutorial_Stealth
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Small_Bank, SteamUpdateImage, TestMap, Tutorial_Loud, Tutorial_Stealth
   components  DefaultSceneRoot (SceneComponent)
 
 PoliceGun_m245_C : PoliceGunBase_C : Actor    /Game/BP/NPC/PoliceGuns/PoliceGun_m245
@@ -6061,7 +6089,7 @@ PoliceShield_C : Actor    /Game/BP/NPC/Police/PoliceItems/PoliceShield
   components  DefaultSceneRoot (SceneComponent), Glass (ChildActorComponent), ShieldMesh (StaticMeshComponent)
 
 PoliceSpawnLocation_C : Actor    /Game/BP/NPC/PoliceSpawnLocation
-  maps        Bank, BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, HighRise, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_ShadyWarehouse, Setup_UndergroundConstructionSite, SetupTestMap, Small_Bank, Small_Map_Presset, TestMap, TikTokScene, Tutorial_Loud, Tutorial_Stealth
+  maps        Bank, BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, HighRise, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_ShadyWarehouse, Setup_UndergroundConstructionSite, SetupTestMap, Small_Bank, Small_Map_Presset, TestMap, TikTokScene, Tutorial_Loud, Tutorial_Stealth
   components  Arrow (ArrowComponent), DefaultSceneRoot (SceneComponent)
 
 PoliceTargetInterface_C : Interface    /Game/BP/Player/PoliceTargetInterface
@@ -6084,7 +6112,7 @@ PoliceTrap_BarbedWire_C : Actor    /Game/BP/NPC/Police/PoliceItems/PoliceTrap_Ba
   func  ReceiveActorEndOverlap(Actor* OtherActor)   [Event]
 
 PoliceWaveSpawner_C : Actor    /Game/BP/NPC/PoliceWaveSpawner
-  maps        Bank, BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, HighRise, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_UndergroundConstructionSite, SetupTestMap, Small_Bank, Small_Map_Presset, TestMap, TikTokScene, Tutorial_Loud, Tutorial_Stealth
+  maps        Bank, BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, HighRise, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_UndergroundConstructionSite, SetupTestMap, Small_Bank, Small_Map_Presset, TestMap, TikTokScene, Tutorial_Loud, Tutorial_Stealth
   components  DefaultSceneRoot (SceneComponent)
   var   int WaveNumber   [replicated]
   var   array<class<PoliceGunBase_C>> PoliceGuns
@@ -6147,7 +6175,7 @@ RatCharacter_C : Character    /Game/Models/Rats/RatCharacter
   func  ReceiveBeginPlay()   [Event]
 
 RestrictedAreaVolume_C : Actor    /Game/BP/NPC/RestrictedAreaVolume
-  maps        Bar_drugs, Casino, CIA_Base, ExampleMap, HighRise, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Small_Bank, TestMap, Tutorial_Stealth
+  maps        Bar_drugs, Casino, CIA_Base, ExampleMap, HighRise, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Small_Bank, TestMap, Tutorial_Stealth
   components  Box (BoxComponent), DefaultSceneRoot (SceneComponent)
   var   bool ArrestWarning?
   func  IsInSuperRestricted?(PlayerCharacter_C* Player, out bool Arrest?, out bool In restricted?)
@@ -6204,13 +6232,13 @@ Road_straight_broken_C : Actor    /Game/Assets/BPBuildingTools/Env/Road_straight
   func  UserConstructionScript()   [Event]
 
 Road_straight_C : Actor    /Game/Assets/BPBuildingTools/Env/Road_straight
-  maps        Bank, BankCutInHalf, Bar_drugs, CIA_Base, HighRise, JewelleryStore, Knightsbridge_day, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_PostalOffice, Setup_ShadyWarehouse, Setup_UndergroundConstructionSite, SetupTestMap, Small_Bank, Small_Map_Presset, TestMap
+  maps        Bank, BankCutInHalf, Bar_drugs, CIA_Base, HighRise, JewelleryStore, Knightsbridge_day, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_PostalOffice, Setup_ShadyWarehouse, Setup_UndergroundConstructionSite, SetupTestMap, Small_Bank, Small_Map_Presset, TestMap
   components  DefaultSceneRoot (SceneComponent), SidewalkLeft1 (StaticMeshComponent), SidewalkLeft2 (StaticMeshComponent), SidewalkLeft3 (StaticMeshComponent), SidewalkLeft4 (StaticMeshComponent), SpotLight (SpotLightComponent), StaticMesh1 (StaticMeshComponent), StaticMesh10 (StaticMeshComponent), StaticMesh11 (StaticMeshComponent), StaticMesh12 (StaticMeshComponent), StaticMesh13 (StaticMeshComponent), StaticMesh14 (StaticMeshComponent), StaticMesh15 (StaticMeshComponent), StaticMesh2 (StaticMeshComponent), StaticMesh3 (StaticMeshComponent), StaticMesh7 (StaticMeshComponent), StaticMesh8 (StaticMeshComponent), StaticMesh9 (StaticMeshComponent), StreetLight (StaticMeshComponent)
   var   bool Light
   func  UserConstructionScript()   [Event]
 
 Road_straight_Small_C : Actor    /Game/Assets/BPBuildingTools/Env/Road_straight_Small
-  maps        Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Setup_PostalOffice
+  maps        Map_AIDataCenter, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Setup_PostalOffice
   components  DefaultSceneRoot (SceneComponent), SidewalkLeft1 (StaticMeshComponent), SidewalkLeft2 (StaticMeshComponent), SidewalkLeft3 (StaticMeshComponent), SidewalkLeft4 (StaticMeshComponent), StaticMesh1 (StaticMeshComponent), StaticMesh10 (StaticMeshComponent), StaticMesh11 (StaticMeshComponent), StaticMesh12 (StaticMeshComponent), StaticMesh3 (StaticMeshComponent), StaticMesh7 (StaticMeshComponent), StaticMesh8 (StaticMeshComponent), StaticMesh9 (StaticMeshComponent)
 
 Road_straight_SmallEnd_C : Actor    /Game/Assets/BPBuildingTools/Env/Road_straight_SmallEnd
@@ -6223,15 +6251,15 @@ Road_straight_trees_C : Actor    /Game/Assets/BPBuildingTools/Env/Road_straight_
   func  UserConstructionScript()   [Event]
 
 Road_T-Cross_C : Actor    /Game/Assets/BPBuildingTools/Env/Road_T-Cross
-  maps        Bank, BankCutInHalf, Bar_drugs, CIA_Base, HighRise, JewelleryStore, Knightsbridge_day, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_PostalOffice, Setup_UndergroundConstructionSite, SetupTestMap, Small_Bank, Small_Map_Presset, TestMap
+  maps        Bank, BankCutInHalf, Bar_drugs, CIA_Base, HighRise, JewelleryStore, Knightsbridge_day, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_PostalOffice, Setup_UndergroundConstructionSite, SetupTestMap, Small_Bank, Small_Map_Presset, TestMap
   components  DefaultSceneRoot (SceneComponent), SidewalkLeft1 (StaticMeshComponent), SidewalkLeft2 (StaticMeshComponent), SidewalkLeft3 (StaticMeshComponent), SidewalkLeft4 (StaticMeshComponent), StaticMesh1 (StaticMeshComponent), StaticMesh10 (StaticMeshComponent), StaticMesh11 (StaticMeshComponent), StaticMesh12 (StaticMeshComponent), StaticMesh13 (StaticMeshComponent), StaticMesh14 (StaticMeshComponent), StaticMesh15 (StaticMeshComponent), StaticMesh2 (StaticMeshComponent), StaticMesh3 (StaticMeshComponent), StaticMesh7 (StaticMeshComponent), StaticMesh8 (StaticMeshComponent), StaticMesh9 (StaticMeshComponent), StreetLight (StaticMeshComponent), StreetLight1 (StaticMeshComponent)
 
 Road_T-Cross_SmallRoad_C : Actor    /Game/Assets/BPBuildingTools/Env/Road_T-Cross_SmallRoad
-  maps        Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Setup_PostalOffice, Setup_ShadyWarehouse
+  maps        Map_AIDataCenter, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Setup_PostalOffice, Setup_ShadyWarehouse
   components  DefaultSceneRoot (SceneComponent), SidewalkLeft1 (StaticMeshComponent), SidewalkLeft3 (StaticMeshComponent), SidewalkLeft4 (StaticMeshComponent), StaticMesh1 (StaticMeshComponent), StaticMesh10 (StaticMeshComponent), StaticMesh11 (StaticMeshComponent), StaticMesh12 (StaticMeshComponent), StaticMesh13 (StaticMeshComponent), StaticMesh14 (StaticMeshComponent), StaticMesh15 (StaticMeshComponent), StaticMesh2 (StaticMeshComponent), StaticMesh3 (StaticMeshComponent), StaticMesh4 (StaticMeshComponent), StaticMesh7 (StaticMeshComponent), StaticMesh8 (StaticMeshComponent), StaticMesh9 (StaticMeshComponent), StreetLight (StaticMeshComponent), StreetLight1 (StaticMeshComponent)
 
 Road_Turn_C : Actor    /Game/Assets/BPBuildingTools/Env/Road_Turn
-  maps        Bar_drugs, JewelleryStore, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_PostalOffice, Setup_ShadyWarehouse, Setup_UndergroundConstructionSite, SetupTestMap, Small_Bank, Small_Map_Presset, TestMap
+  maps        Bar_drugs, JewelleryStore, Map_AIDataCenter, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_PostalOffice, Setup_ShadyWarehouse, Setup_UndergroundConstructionSite, SetupTestMap, Small_Bank, Small_Map_Presset, TestMap
   components  DefaultSceneRoot (SceneComponent), SidewalkLeft1 (StaticMeshComponent), SidewalkLeft2 (StaticMeshComponent), SidewalkLeft3 (StaticMeshComponent), SidewalkLeft4 (StaticMeshComponent), StaticMesh1 (StaticMeshComponent), StaticMesh10 (StaticMeshComponent), StaticMesh11 (StaticMeshComponent), StaticMesh12 (StaticMeshComponent), StaticMesh13 (StaticMeshComponent), StaticMesh14 (StaticMeshComponent), StaticMesh15 (StaticMeshComponent), StaticMesh2 (StaticMeshComponent), StaticMesh3 (StaticMeshComponent), StaticMesh7 (StaticMeshComponent), StaticMesh8 (StaticMeshComponent), StaticMesh9 (StaticMeshComponent), StreetLight (StaticMeshComponent), StreetLight1 (StaticMeshComponent)
 
 RoadEnd_C : Actor    /Game/Assets/BPBuildingTools/Env/RoadEnd
@@ -6520,7 +6548,7 @@ RobberPlayerState_C : PlayerState    /Game/BP/Player/RobberPlayerState
   var   bool Speaking?   [replicated]
 
 RobberTruck_C : Actor    /Game/BP/Player/RobberTruck
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_WineStore, Museum_night, Small_Bank, Small_Map_Presset, SteamUpdateImage, TestMap, TestMap_empty, TikTokScene, Tutorial_Stealth
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_WineStore, Museum_night, Small_Bank, Small_Map_Presset, SteamUpdateImage, TestMap, TestMap_empty, TikTokScene, Tutorial_Stealth
   components  Box (BoxComponent), Box3 (StaticMeshComponent), Camera (CameraComponent), Clock (StaticMeshComponent), Clock1 (StaticMeshComponent), DefaultSceneRoot (SceneComponent), EndOfTruck (ChildActorComponent), Fan (StaticMeshComponent), FanBase (StaticMeshComponent), FanShell (StaticMeshComponent), LeaveButton (ChildActorComponent), MinTakeText (TextRenderComponent), MoneyOverlapper (BoxComponent), Plane (StaticMeshComponent), Plane1 (StaticMeshComponent), Playerstart (ChildActorComponent), Playerstart1 (ChildActorComponent), Playerstart2 (ChildActorComponent), Playerstart3 (ChildActorComponent), PointLight (PointLightComponent), PointLight1 (PointLightComponent), PointLight2 (PointLightComponent), Poster (StaticMeshComponent), SM_Item_AmmoPack_01 (StaticMeshComponent), SM_Item_AmmoPack_011 (StaticMeshComponent), SM_Item_AmmoPack_012 (StaticMeshComponent), SM_Item_AmmoPack_013 (StaticMeshComponent), SM_Item_AmmoPack_02 (StaticMeshComponent), SM_Item_AmmoPack_03 (StaticMeshComponent), SM_Item_AmmoPack_04 (StaticMeshComponent), SM_Item_AmmoPack_05 (StaticMeshComponent), SM_Item_AmmoPack_06 (StaticMeshComponent), SM_Item_AmmoPack_07 (StaticMeshComponent), SM_Item_AmmoPack_08 (StaticMeshComponent), SM_Item_AmmoPack_09 (StaticMeshComponent), Shelf (ChildActorComponent), Shelf1 (ChildActorComponent), Shelf2 (ChildActorComponent), Shelf3 (ChildActorComponent), Socket (StaticMeshComponent), SteamAchievementComponent (SteamAchievementComponent_C), Table2 (StaticMeshComponent), Table3 (StaticMeshComponent), Table4 (StaticMeshComponent), TruckMesh (StaticMeshComponent), Vent (StaticMeshComponent), WalkWay (StaticMeshComponent), WalkWay1 (StaticMeshComponent), WalkWay2 (StaticMeshComponent), WalkWay3 (StaticMeshComponent), WalkWay4 (StaticMeshComponent), WalkWay5 (StaticMeshComponent), WallLamp (StaticMeshComponent), WallLamp1 (StaticMeshComponent), WallLamp2 (StaticMeshComponent), WallLamp3 (StaticMeshComponent), WeaponBoard (ChildActorComponent), WhiteBoardText (TextRenderComponent), WhiteBoardText2 (TextRenderComponent), Whiteboard (StaticMeshComponent), ladder (StaticMeshComponent)
   var   int TotalTake   [replicated]
   var   int MinimumTake
@@ -6608,7 +6636,7 @@ SecurityTagDetector_C : Actor    /Game/BP/Puzzle/SecurityTags/SecurityTagDetecto
   func  Reset()
 
 SensingActor_C : Pawn    /Game/BP/NPC/SensingActor
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Small_Bank, SteamUpdateImage, TestMap, Tutorial_Loud, Tutorial_Stealth
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Small_Bank, SteamUpdateImage, TestMap, Tutorial_Loud, Tutorial_Stealth
   components  Arrow (ArrowComponent), DefaultSceneRoot (SceneComponent), PawnSensing (PawnSensingComponent)
 
 Setup3DWidgetBP_C : Actor    /Game/UI/Menu/Setups/Setup3DWidgetBP
@@ -6903,6 +6931,9 @@ ShopItem_Map_BlackDiamondCasino_C : ShopItem_Map_base_C : ShopItem_Base_C : Acto
   components  DefaultSceneRoot (SceneComponent)
 
 ShopItem_Map_CarMansion_C : ShopItem_Map_base_C : ShopItem_Base_C : Actor    /Game/Maps/Menu/BP/Shop/Maps/ShopItem_Map_CarMansion
+  components  DefaultSceneRoot (SceneComponent)
+
+ShopItem_Map_Datacenter_C : ShopItem_Map_base_C : ShopItem_Base_C : Actor    /Game/Maps/Menu/BP/Shop/Maps/ShopItem_Map_Datacenter
   components  DefaultSceneRoot (SceneComponent)
 
 ShopItem_Map_EscoBar_C : ShopItem_Map_base_C : ShopItem_Base_C : Actor    /Game/Maps/Menu/BP/Shop/Maps/ShopItem_Map_EscoBar
@@ -7953,10 +7984,55 @@ ShopItemPreview_C : Actor    /Game/Maps/Menu/BP/Shop/ShopItemPreview
   func  UserConstructionScript()   [Event]
 
 Sign_C : Actor    /Game/BP/Utility/Sign
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_WineStore, Museum_night, Small_Bank
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_WineStore, Museum_night, Small_Bank
   components  DefaultSceneRoot (SceneComponent), StaticMesh (StaticMeshComponent), TextRender (TextRenderComponent)
   var   string Text
   func  UserConstructionScript()   [Event]
+
+SimonGame_BP_C : Actor    /Game/BP/Puzzle/SimonGame/SimonGame_BP
+  maps        Map_AIDataCenter
+  components  AlertComponent (AlertComponent_C), Blue2 (StaticMeshComponent), DefaultSceneRoot (SceneComponent), Green0 (StaticMeshComponent), HighlightInRangeComponent (HighlightInRangeComponent_C), InteractComponent (InteractComponent_C), LifeLight1 (StaticMeshComponent), LifeLight2 (StaticMeshComponent), LifeLight3 (StaticMeshComponent), LookatInfoComponent (LookatInfoComponent_C), Red1 (StaticMeshComponent), SimonPanelBase_SM_SimonPanel_Base_01 (StaticMeshComponent), StartGameCheck (BoxComponent), Yellow3 (StaticMeshComponent)
+  var   array<int> SimonOrderArray   [replicated]
+  var   array<StaticMeshComponent*> SimonButtonComps   [replicated]
+  var   array<SoundWave*> SimonSounds   [replicated]
+  var   array<MaterialInterface*> SimonButtonCompMaterials   [replicated]
+  var   array<Actor*> AffectedActors   [replicated]
+  var   array<StaticMeshComponent*> LifeLights   [replicated]
+  var   float StartingSimonStepSpeed   [replicated]
+  var   float ReduceSimonStepSpeed   [replicated]
+  var   int LoopTempArrayIndex   [replicated]
+  var   int OrderArrayIndex   [replicated]
+  var   int MaxSimonSteps   [replicated]
+  var   int MinSimonSteps   [replicated]
+  var   int CurrentMaxSimonSteps   [replicated]
+  var   int LifeAmount   [replicated]
+  var   bool LoopIsFinished   [replicated]
+  var   bool CanPlayerInteract   [replicated]
+  var   TimerHandle TimerHandle   [replicated]
+  var   PrimitiveComponent* Hit Component
+  var   bool StopLifeLightBlinking   [replicated]
+  var   MaterialInstanceDynamic* ProgressBar_DM   [replicated]
+  var   bool StopSuccessLightBlinking   [replicated]
+  var   bool StopPreGameBlinking   [replicated]
+  var   bool HasAlarmTriggered   [replicated]
+  func  Activate()
+  func  BeginSimonSequence()
+  func  Deactivate()
+  func  FailBlinking()
+  func  FailSequenceAV(int Tries)   [Multicast]
+  func  Failure()   [Server]
+  func  GameWinVisuals()   [Multicast]
+  func  GenerateRandomSequence()   [Server]
+  func  InteractVisuals(PrimitiveComponent* HitComponent, bool Enable?)   [Multicast]
+  func  LoopSimonSequence()   [Server]
+  func  PopulateComponentArray()
+  func  PreGameBlinking()
+  func  ReceiveBeginPlay()   [Event]
+  func  Reset()
+  func  RoundWinAV()   [Multicast]
+  func  SimonSequenceVisuals(int TempIndex, bool Enable?)   [Multicast]
+  func  Success()   [Server]
+  func  SuccessBlinking()
 
 Skill3dWidget_C : Actor    /Game/UI/Menu/Skills/Skill3dWidget
   maps        MainMenu
@@ -8201,7 +8277,7 @@ Tool_BatteringRam_C : PickupItem_base_C : StaticMeshActor    /Game/BP/Items/Tool
   func  ReceiveHit(PrimitiveComponent* MyComp, Actor* Other, PrimitiveComponent* OtherComp, bool bSelfMoved, Vector HitLocation, Vector HitNormal, Vector NormalImpulse, HitResult Hit)   [Event]
 
 Tool_Boxcutter_C : PickupItem_base_C : StaticMeshActor    /Game/BP/Setups/CardboardBoxes/Tool_Boxcutter
-  maps        Map_Harbour, Map_PostalOffice, Map_Setup_jewellery_1, Setup_PostalOffice
+  maps        Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Setup_jewellery_1, Setup_PostalOffice
   components  DefaultSceneRoot (SceneComponent), LookatInfoComponent (LookatInfoComponent_C), PickupItemComponent (PickupItemComponent_C), SusItemComponent (SusItemComponent_C)
 
 Tool_Camerahack_C : PickupItem_base_C : StaticMeshActor    /Game/BP/Items/Tools/Stealth/Tool_Camerahack
@@ -8278,7 +8354,7 @@ ToolOwnerComponent_C : ActorComponent    /Game/BP/Component/ToolOwnerComponent
   func  TakeDamage(int Damage)   [Server]
 
 ToolSpot_C : Actor    /Game/BP/Utility/ToolSpot
-  maps        Bank, BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, HighRise, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Small_Bank, TestMap, Tutorial_Loud, Tutorial_Stealth
+  maps        Bank, BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, HighRise, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Small_Bank, TestMap, Tutorial_Loud, Tutorial_Stealth
   components  Box (BoxComponent), DefaultSceneRoot (SceneComponent), PhysicsHandle (PhysicsHandleComponent)
   var   Actor* Tool   [replicated]
   var   int SpotHealth   [replicated]
@@ -8294,7 +8370,7 @@ ToolSpot_C : Actor    /Game/BP/Utility/ToolSpot
   func  UserConstructionScript()   [Event]
 
 ToolSpotMesh_C : Actor    /Game/BP/Utility/ToolSpotMesh
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Map_PostalOffice, Map_WineStore, Museum_night, Small_Bank, TestMap, Tutorial_Loud, Tutorial_Stealth
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ExampleMap, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Map_AIDataCenter, Map_PostalOffice, Map_WineStore, Museum_night, Small_Bank, TestMap, Tutorial_Loud, Tutorial_Stealth
   components  ChildActor (ChildActorComponent), DefaultSceneRoot (SceneComponent), Mesh (StaticMeshComponent), SpottedHighlightcomponent (SpottedHighlightcomponent_C), ToolOwnerComponent (ToolOwnerComponent_C)
   var   StaticMesh* MeshVar
   var   int Damage
@@ -8394,7 +8470,7 @@ TutorialUIOverlapper_SpecificKey_C : TutorialUIOverlapper_C : Actor    /Game/BP/
   func  ReceiveBeginPlay()   [Event]
 
 UnlockCollision_C : Actor    /Game/BP/Utility/UnlockCollision
-  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Small_Bank, TestMap, Tutorial_Loud, Tutorial_Stealth
+  maps        BankCutInHalf, Bar_drugs, Casino, CIA_Base, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_PostalOffice, Small_Bank, TestMap, Tutorial_Loud, Tutorial_Stealth
   components  Box (BoxComponent), DefaultSceneRoot (SceneComponent), InteractComponent (InteractComponent_C), LookatInfoComponent (LookatInfoComponent_C)
   func  UnlockSound()   [Multicast]
 
@@ -8406,13 +8482,21 @@ Valuable_beaker_C : Money_base_C : PickupItem_base_C : StaticMeshActor    /Game/
   components  DefaultSceneRoot (SceneComponent), LookatInfoComponent (LookatInfoComponent_C), PickupItemComponent (PickupItemComponent_C)
 
 Valuable_Bonds_C : Money_base_C : PickupItem_base_C : StaticMeshActor    /Game/BP/Items/Valuables/Valuable_Bonds
-  maps        BankCutInHalf, Casino, Knightsbridge_day, Mansion_Car, Map_PostalOffice, Small_Bank
+  maps        BankCutInHalf, Casino, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_PostalOffice, Small_Bank
   components  DefaultSceneRoot (SceneComponent), LookatInfoComponent (LookatInfoComponent_C)
 
 Valuable_CircuitBoard_C : Money_base_C : PickupItem_base_C : StaticMeshActor    /Game/BP/Items/Valuables/Military/Valuable_CircuitBoard
   components  DefaultSceneRoot (SceneComponent), LookatInfoComponent (LookatInfoComponent_C), PickupItemComponent (PickupItemComponent_C)
 
+Valuable_RAM_C : Money_base_C : PickupItem_base_C : StaticMeshActor    /Game/BP/Items/Valuables/Valuable_RAM
+  maps        Map_AIDataCenter
+  components  DefaultSceneRoot (SceneComponent), LookatInfoComponent (LookatInfoComponent_C), PickupItemComponent (PickupItemComponent_C)
+
 Valuable_Rocket_C : Money_base_C : PickupItem_base_C : StaticMeshActor    /Game/BP/Items/Valuables/Military/Valuable_Rocket
+  components  DefaultSceneRoot (SceneComponent), LookatInfoComponent (LookatInfoComponent_C), PickupItemComponent (PickupItemComponent_C)
+
+Valuable_SSD_C : Money_base_C : PickupItem_base_C : StaticMeshActor    /Game/BP/Items/Valuables/Valuable_SSD
+  maps        Map_AIDataCenter
   components  DefaultSceneRoot (SceneComponent), LookatInfoComponent (LookatInfoComponent_C), PickupItemComponent (PickupItemComponent_C)
 
 Valuable_wine_AmaroneRossoSegreto_C : Money_base_C : PickupItem_base_C : StaticMeshActor    /Game/BP/Items/Valuables/Wines/Valuable_wine_AmaroneRossoSegreto
@@ -8436,7 +8520,7 @@ Valuable_wine_VinoRossoIncantato_C : Money_base_C : PickupItem_base_C : StaticMe
   components  DefaultSceneRoot (SceneComponent), LookatInfoComponent (LookatInfoComponent_C), PickupItemComponent (PickupItemComponent_C), SusItemComponent (SusItemComponent_C)
 
 ValuableCounter_C : Actor    /Game/BP/Items/Valuables/ValuableCounter
-  maps        Casino
+  maps        Casino, Map_AIDataCenter
   components  DefaultSceneRoot (SceneComponent), DistanceSphere (SphereComponent)
   var   int Valuables total worth
   var   float Within distance
@@ -8456,7 +8540,7 @@ Valueable_CasinoChips500_C : Money_base_C : PickupItem_base_C : StaticMeshActor 
   components  DefaultSceneRoot (SceneComponent), LookatInfoComponent (LookatInfoComponent_C), PickupItemComponent (PickupItemComponent_C)
 
 Vault_DoorRectangle_C : VaultDoor_C : Actor    /Game/BP/Utility/Vaults/Vault_DoorRectangle
-  maps        Bar_drugs, Casino, JewelleryStore, Map_PostalOffice, Map_WineStore, Museum_night, Small_Bank, TestMap, Tutorial_Loud, Tutorial_Stealth
+  maps        Bar_drugs, Casino, JewelleryStore, Map_AIDataCenter, Map_PostalOffice, Map_WineStore, Museum_night, Small_Bank, TestMap, Tutorial_Loud, Tutorial_Stealth
   components  ChildActor (ChildActorComponent), ChildActor1 (ChildActorComponent), DefaultSceneRoot (SceneComponent), Door (StaticMeshComponent), NavCorrecter (BoxComponent), SM_Bld_Base_Wall_Door_01 (StaticMeshComponent)
 
 VaultDefault_C : VaultDoor_C : Actor    /Game/BP/Utility/Vaults/VaultDefault
@@ -8519,7 +8603,7 @@ WeaponBag_C : Actor    /Game/BP/Player/WeaponBag
   func  SpawnMag(class<Actor> magActor, bool Rifle?)
 
 WeaponBagSpawnPoint_C : Actor    /Game/BP/Player/WeaponBagSpawnPoint
-  maps        Bank, BankCutInHalf, Bar_drugs, Casino, CIA_Base, Demonstation, ExampleMap, HighRise, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_ShadyWarehouse, SetupTestMap, Small_Bank, Small_Map_Presset, SteamUpdateImage, TestMap, TestMap_empty, TikTokScene, Tutorial_Loud, Tutorial_Stealth
+  maps        Bank, BankCutInHalf, Bar_drugs, Casino, CIA_Base, Demonstation, ExampleMap, HighRise, ImageScene, ImageScene_Skins, JewelleryStore, Knightsbridge_day, Mansion_Car, Map_AIDataCenter, Map_Harbour, Map_NewsStation, Map_PostalOffice, Map_Sciencelab, Map_Setup_jewellery_1, Map_WineStore, Museum_night, Setup_ConstructionSite, Setup_MilitaryBase, Setup_PostalOffice, Setup_ShadyWarehouse, SetupTestMap, Small_Bank, Small_Map_Presset, SteamUpdateImage, TestMap, TestMap_empty, TikTokScene, Tutorial_Loud, Tutorial_Stealth
   components  DefaultSceneRoot (SceneComponent), Direction (ArrowComponent), StaticMesh (StaticMeshComponent)
   func  ReceiveBeginPlay()   [Event]
 
@@ -8531,7 +8615,7 @@ WeaponSkinLibrary_C : BlueprintFunctionLibrary    /Game/BP/Guns/WeaponSkins/Weap
   func  WeaponSkinLookup(int SkinID, Object* __WorldContext, out WeaponSkinStruct WeaponSkinStruct, out bool Found?)   [Static]
 
 Window_Openable_C : Actor    /Game/BP/Utility/Window_Openable
-  maps        CIA_Base, JewelleryStore, Mansion_Car, Map_PostalOffice, Map_Sciencelab, Map_WineStore, Small_Bank, TestMap, Tutorial_Loud
+  maps        CIA_Base, JewelleryStore, Mansion_Car, Map_AIDataCenter, Map_PostalOffice, Map_Sciencelab, Map_WineStore, Small_Bank, TestMap, Tutorial_Loud
   components  Box (BoxComponent), Box1 (BoxComponent), DamageComponent (DamageComponent_C), DefaultSceneRoot (SceneComponent), Frame_bottom (StaticMeshComponent), Frame_top (StaticMeshComponent), Glass-top (ChildActorComponent), Glass_bottom (ChildActorComponent), InteractComponent (InteractComponent_C), LookatInfoComponent (LookatInfoComponent_C)
   var   bool Locked?   [replicated]
   var   bool open?   [replicated]
@@ -8554,7 +8638,7 @@ XN-1070_C : GunBase_C : Actor    /Game/BP/Guns/XN-1070
   func  ReceiveBeginPlay()   [Event]
 
 
-WHAT IS PLACED ON EACH MAP  [52 maps]  (Blueprint actors only, with counts)
+WHAT IS PLACED ON EACH MAP  [53 maps]  (Blueprint actors only, with counts)
 ==============================================================================
 Only what the level designer placed. Things the game spawns while you play (vault loot,
 police waves) are not in the map file, so they don't show up here.
@@ -8776,6 +8860,26 @@ Mansion_Car    /Game/Maps/HeistMaps/Mansion_Car    (1587 actors, 61 Blueprint ty
   LeaveButton_C x1                  Mask_PartyHatNeon_C x1            PoliceWaveSpawner_C x1            RobberTruck_C x1
   SM_Prop_Bench_01_Corner_4_Blueprint_C x1TowableCar_C x1                   TowableCarFront_C x1              Valuable_wine_AmaroneRossoSegreto_C x1
   WeaponBagSpawnPoint_C x1
+
+Map_AIDataCenter    /Game/Maps/HeistMaps/Map_AIDataCenter    (4070 actors, 71 Blueprint types)
+  BP_Wall_C x664                    Floor_Ceiling_C x159              BreakableGlass_C x97              BP_AmbientSoundZone_C x45
+  Valuable_RAM_C x40                GuardPatrolPoint_C x30            Sign_C x29                        DoorBP_C x28
+  ToolSpot_C x24                    Valuable_SSD_C x20                Lock_C x18                        NPC_Guard_C x14
+  PoliceGun_Glock_C x14             SensingActor_C x14                BP_HackingPoint_C x12             Equipmentshelf_equipment_Empty_C x12
+  Floor_C x12                       GuardScanPoint_C x11              BP_handscanner_C x10              DoorBP_Locked_C x9
+  UnlockCollision_C x9              BP_AreaBoundsBlockingVolume_C x8  BP_Powerbox_C x8                  Civilian_NPC_C x8
+  Road_straight_C x8                CameraBP_C x7                     Window_Openable_C x7              BP_Explosive_Base_C x6
+  BreakableGlass_Interact_C x6      InstructionOverlapper_C x6        SimonGame_BP_C x6                 BP_Explosive_PropaneCan_C x5
+  NPC_Civilian_CustomClothes_C x5   Duffelbag_C x4                    EquipmentShelf_shelf_C x4         Item_Keycard_C x4
+  Lock_Alarm_C x4                   PoliceSpawnLocation_C x4          RestrictedAreaVolume_C x4         BP_DraggableExplosive_Base_C x3
+  GarageDoor_C x3                   Road_Turn_C x3                    BP_Button_C x2                    DoorBP_Locked_Alarm_C x2
+  Item_OpenableBox_closed_C x2      Lock_pick_C x2                    MetalDetector_C x2                ParkingLot_C x2
+  ToolSpotMesh_C x2                 AlarmBP_C x1                      BP_AmbienceSoundController_C x1   BP_PowerSwitch_C x1
+  BP_Sky_Sphere_C x1                CameraController_C x1             EndOfTruck_Default_C x1           FanSpinner_BP_C x1
+  GuardEscortPoint_C x1             Guardmanager_C x1                 Instruction_DataCenter_C x1       Item_OpenableBox_CustomItems_C x1
+  LeaveButton_C x1                  PoliceWaveSpawner_C x1            Road_straight_Small_C x1          Road_T-Cross_C x1
+  Road_T-Cross_SmallRoad_C x1       RobberTruck_C x1                  Tool_Boxcutter_C x1               Valuable_Bonds_C x1
+  ValuableCounter_C x1              Vault_DoorRectangle_C x1          WeaponBagSpawnPoint_C x1
 
 Map_Harbour    /Game/Maps/HeistMaps/Map_Harbour    (1558 actors, 75 Blueprint types)
   ContainerStack_C x122             BP_Wall_C x70                     BreakableGlass_C x51              ContainerRow_C x47

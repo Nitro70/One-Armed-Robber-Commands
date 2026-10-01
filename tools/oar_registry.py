@@ -48,7 +48,6 @@ class _Registry:
             b0, b1 = self.d[headers + 2 * i], self.d[headers + 2 * i + 1]
             length = ((b0 & 0x7F) << 8) | b1
             if b0 & 0x80:
-                s += (s - start) & 1
                 self.names.append(self.d[s:s + 2 * length].decode("utf-16le"))
                 s += 2 * length
             else:

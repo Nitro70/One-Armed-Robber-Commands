@@ -90,6 +90,51 @@ def main():
                 not os.path.exists(os.path.join(win64, "dwmapi.dll")) and not os.path.exists(os.path.join(mods, "OARCommands")))
     ok &= check("mods.txt loses only the OARCommands line", b"OARCommands" not in mods_txt and b"MyOtherMod : 1" in mods_txt)
 
+    # 5b. config.lua: default on install, edits kept or saved aside on update, gone after uninstall
+    root = tempfile.mkdtemp()
+    win64 = fake_game(root)
+    mod = os.path.join(win64, "Mods", "OARCommands")
+    config, default, old = (os.path.join(mod, n) for n in ("config.lua", "config.default.lua", "config.old.lua"))
+    code, log = run(DEBUG_EXE, root, "install", test_env)
+    shipped = open(config, "rb").read()
+    ok &= check("install writes config.lua and an identical untouched copy",
+                code == 0 and shipped == open(default, "rb").read() and b"local V = {" in shipped
+                and "default config.lua" in log)
+    ok &= check("the old separate command files are not installed any more",
+                sorted(os.listdir(os.path.join(mod, "Scripts"))) == ["main.lua", "maps.lua", "spawnables.lua", "unlockables.lua"])
+    open(config, "ab").write(b"\n-- my edit\n")
+    mine = open(config, "rb").read()
+    code, log = run(DEBUG_EXE, root, "install", test_env)
+    ok &= check("update with the same default keeps an edited config.lua",
+                code == 0 and open(config, "rb").read() == mine and not os.path.exists(old) and "was kept" in log)
+    open(default, "wb").write(b"-- the default of an older version\n")
+    code, log = run(DEBUG_EXE, root, "install", test_env)
+    ok &= check("update with a new default saves the edited config as config.old.lua and installs the new one",
+                code == 0 and open(config, "rb").read() == shipped and open(old, "rb").read() == mine
+                and open(default, "rb").read() == shipped and "config.old.lua" in log)
+    code, log = run(DEBUG_EXE, root, "install", test_env)
+    ok &= check("a later update leaves config.old.lua alone", code == 0 and open(old, "rb").read() == mine)
+    open(default, "wb").write(b"-- an older default\n")
+    open(config, "wb").write(b"-- an older default\n")
+    os.remove(old)
+    code, log = run(DEBUG_EXE, root, "install", test_env)
+    ok &= check("an unedited config is simply replaced by the new default",
+                code == 0 and open(config, "rb").read() == shipped and not os.path.exists(old))
+    stale = os.path.join(mod, "Scripts", "share.lua")
+    open(stale, "w").write("-- from 1.2.0\n")
+    record = os.path.join(mod, "installed-files.txt")
+    open(record, "a").write("Mods\\OARCommands\\Scripts\\share.lua\n")
+    code, log = run(DEBUG_EXE, root, "install", test_env)
+    ok &= check("files of an older version that are no longer used are removed on update",
+                code == 0 and not os.path.exists(stale) and "no longer used" in log)
+    open(config, "ab").write(b"\n-- my edit\n")
+    code, log = run(DEBUG_EXE, root, "uninstall", test_env)
+    ok &= check("uninstall removes config.lua with everything else",
+                code == 0 and sorted(os.listdir(win64)) == ["OAR-Win64-Shipping.exe"])
+    code, log = run(DEBUG_EXE, root, "install", test_env)
+    ok &= check("installing again puts the default config back", code == 0 and open(config, "rb").read() == shipped)
+    run(DEBUG_EXE, root, "uninstall", test_env)
+
     # 6. uninstall when nothing is installed is refused
     code, log = run(DEBUG_EXE, root, "uninstall", test_env)
     ok &= check("uninstall without an install is refused", code == 1 and "No OAR Commands install" in log)

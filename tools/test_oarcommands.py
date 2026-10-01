@@ -1,18 +1,29 @@
-"""Run OARCommands' main.lua against stub UE4SS globals and check its behaviour."""
+"""Run OARCommands (Scripts/main.lua, which loads config.lua) against stub UE4SS globals and check
+its behaviour, including editing config.lua and loading it again with reloadconfig."""
 import os
 import shutil
 import tempfile
 
 from lupa import LuaRuntime
 
-SCRIPTS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "mod", "Mods", "OARCommands", "Scripts")
+MOD = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "mod", "Mods", "OARCommands")
+SCRIPTS = os.path.join(MOD, "Scripts")
 
 
-def make_runtime(tmp):
+def write_config(tmp, text, name="config.lua"):
+    with open(os.path.join(tmp, "OARCommands", name), "w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
+
+
+def make_runtime(tmp, config_text=None):
     scripts = os.path.join(tmp, "OARCommands", "Scripts")
     os.makedirs(scripts, exist_ok=True)
-    for f in ("main.lua", "spawnables.lua", "progress.lua", "unlockables.lua", "share.lua", "player.lua"):
+    for f in ("main.lua", "spawnables.lua", "unlockables.lua", "maps.lua"):
         shutil.copy(os.path.join(SCRIPTS, f), os.path.join(scripts, f))
+    if config_text is None:
+        config_text = open(os.path.join(MOD, "config.lua"), encoding="utf-8").read()
+    write_config(tmp, config_text)
+    write_config(tmp, open(os.path.join(MOD, "config.lua"), encoding="utf-8").read(), "config.default.lua")
     os.environ["LOCALAPPDATA"] = tmp                  # the change log goes under tmp\OAR\Saved\SaveGames
     os.makedirs(os.path.join(tmp, "OAR", "Saved", "SaveGames"), exist_ok=True)
     lua = LuaRuntime(unpack_returned_tuples=True)
@@ -31,10 +42,12 @@ def make_runtime(tmp):
             if ok then return "KEY_" .. k end
             return nil
         end})
-        function RegisterConsoleCommandHandler(name, fn) Handlers[name] = fn end
-        function RegisterKeyBind(key, fn) KeyCallbacks[key] = fn end
+        Registrations = {}    -- how often each command, key and hook was registered with UE4SS
+        local function Count(kind, name) Registrations[kind .. " " .. name] = (Registrations[kind .. " " .. name] or 0) + 1 end
+        function RegisterConsoleCommandHandler(name, fn) Count("command", name); Handlers[name] = fn end
+        function RegisterKeyBind(key, fn) Count("key", key); KeyCallbacks[key] = fn end
         Hooks = {}
-        function RegisterHook(name, fn) Hooks[name] = fn; return 1, 2 end
+        function RegisterHook(name, fn) Count("hook", name); Hooks[name] = fn; return 1, 2 end
         function Param(v) return { get = function() return v end } end          -- a hook parameter
         function FStr(s) return { ToString = function() return s end } end
         function IsKeyBindRegistered(key) return false end
@@ -78,7 +91,32 @@ def make_runtime(tmp):
         function PC:ClientMessage(text) Messages[#Messages + 1] = text; if Hooks["/Script/Engine.PlayerController:ClientMessage"] then Hooks["/Script/Engine.PlayerController:ClientMessage"](Param(PC), Param(FStr(text))) end end
         function PC:WasInputKeyJustPressed(k) return false end
         function PC:EnableCheats() end
-        function FindAllOf(name) return { PC } end
+        -- the lobby: its manager, the host's menu and one lobby character per player
+        Lobby, GI, Menu, MenuPlayers = nil, nil, nil, {}
+        function NewLobby(players)
+            Lobby = { SelectedMap = Invalid, Selects = {} }
+            function Lobby:IsValid() return true end
+            function Lobby:SelectMap(cls) self.SelectedMap = cls; self.Selects[#self.Selects + 1] = cls.Path end
+            Menu = { Started = {}, Shown = true }
+            function Menu:IsValid() return true end
+            function Menu:IsInViewport() return self.Shown end
+            function Menu:StartGame()
+                local ready = true
+                for _, p in ipairs(MenuPlayers) do ready = ready and p["Ready?"] end
+                self.Started[#self.Started + 1] = { map = Lobby.SelectedMap.Path, ready = ready }
+            end
+            MenuPlayers = {}
+            for i = 1, players do MenuPlayers[i] = { ["Ready?"] = false, IsValid = function() return true end } end
+            PC.UnlockedMaps, PC.InventoryResultItems = MakeArray(), MakeArray()
+        end
+        GIUpdates = {}
+        GI = { IsValid = function() return true end }
+        function GI:UpdateMap(cls) GIUpdates[#GIUpdates + 1] = cls.Path end
+        function FindAllOf(name)
+            if name == "MainMenuUI_C" then return Menu and { Menu } or nil end
+            if name == "MainMenuPlayer_C" then return #MenuPlayers > 0 and MenuPlayers or nil end
+            return { PC }
+        end
         -- debug camera: its own controller, which the engine gives no cheat manager in hosted games
         DCC = { CheatManager = Invalid, CheatClass = CM }
         function DCC:IsValid() return true end
@@ -86,9 +124,13 @@ def make_runtime(tmp):
         function DCC:IsInputKeyDown(k) return true end
         function DCC:WasInputKeyJustPressed(k) return false end
         LP = nil              -- the LocalPlayer; nil means "not found", like during loading
-        function FindFirstOf(name) if name == "LocalPlayer" then return LP end end
+        function FindFirstOf(name)
+            if name == "LocalPlayer" then return LP end
+            if name == "LobbyManager_C" then return Lobby end
+            if name == "RobberGI_C" then return GI end
+        end
         NewObjectHooks = {}
-        function NotifyOnNewObject(cls, fn) NewObjectHooks[cls] = fn end
+        function NotifyOnNewObject(cls, fn) Count("class", cls); NewObjectHooks[cls] = fn end
         CallPCs = {}          -- which controller each ExecuteConsoleCommand ran on
         local KSL = {}
         function KSL:IsValid() return true end
@@ -400,7 +442,7 @@ def main():
     changes = os.path.join(tmp, "OAR", "Saved", "SaveGames", "OARCommands-changes.log")
     def change_log():
         return open(changes, encoding="utf-8").read() if os.path.exists(changes) else ""
-    u = lua.eval('require("unlockables")')
+    u = lua.eval('(require("unlockables"))')
     skills, gear = list(u.Skills.values()), list(u.Gear.values())
     ok &= check("unlockables: 17 skills, all with 3 tiers", len(skills) == 17 and all(s.tiers == 3 for s in skills))
     ok &= check("unlockables: cash gear only, no emotes, masks, outfits or maps",
@@ -524,14 +566,14 @@ def main():
 
     # --- command sharing: pure rules
     ok &= check("sharing levels: 0 off, 1 player, 2 world, 3 all but blocked", lua.eval(r"""(function()
-        local S = require("share")
+        local S = OARCommands.Exports.Share
         return not S.Allowed(0, "summon") and S.Allowed(1, "summon") and S.Allowed(1, "destroytarget")
             and not S.Allowed(1, "slomo") and S.Allowed(2, "slomo") and not S.Allowed(2, "stat")
             and S.Allowed(3, "stat") and not S.Allowed(3, "exit") and not S.Allowed(3, "deletecloudfiles")
             and not S.Allowed(3, "setmoney") and not S.Allowed(3, "open")
     end)()"""))
     ok &= check("request format round-trips with a camera pose", lua.eval(r"""(function()
-        local S = require("share")
+        local S = OARCommands.Exports.Share
         local id, line, pose = S.Decode(S.Encode("ab1", "destroytarget", { x = 1.4, y = -2, z = 3, pitch = -10.25, yaw = 90 }))
         return id == "ab1" and line == "destroytarget" and pose.x == 1 and pose.y == -2 and pose.pitch == -10.2 and pose.yaw == 90
     end)()"""))
@@ -624,6 +666,169 @@ def main():
                 len(g.Sent) == 0 and values(g.Summons) == ["Goldbar_C"])
     lua.execute('Authority = true; QueueDelays = false')
     ok &= check("host or solo: god is left to the engine", lua.eval('Console("god")') is False)
+
+    # --- selectmap and forcemap
+    maps = lua.eval('(require("maps"))')
+    heists = list(maps.Heists.values())
+    paid = [h for h in heists if h.coin > 0]
+    other = [f.lower() for f in maps.Other.values()]
+    ok &= check("maps: 13 heists, the 6 sold for coins carry a Steam item ID and are not in the plain list",
+                len(heists) == 13 and len(paid) == 6 and all(h.item > 0 for h in paid)
+                and not any(h.file.lower() in other for h in paid))
+    ok &= check("map names: short name, title with spaces, map file, unique start; dev maps by file name",
+                lua.eval(r"""(function()
+        local L = OARCommands.Exports.Lobby
+        local function key(text) local r = L.Resolve(text) return r and ((r.heist and r.heist.key) or r.file) end
+        return key("datacenter") == "datacenter" and key("data center") == "datacenter"
+            and key("Map_AIDataCenter") == "datacenter" and key("muse") == "museum" and key("testmap") == "TestMap"
+            and key("small bank") == "small_bank" and L.Resolve("tutorial") == nil and L.Resolve("nosuchmap") == nil
+    end)()""") is True)
+    museum = "/Game/Maps/Menu/BP/Shop/Maps/ShopItem_Map_Museum.ShopItem_Map_Museum_C"
+    datacenter = "/Game/Maps/Menu/BP/Shop/Maps/ShopItem_Map_Datacenter.ShopItem_Map_Datacenter_C"
+    lua.execute('Authority = true; NewLobby(3); Log = {}; Calls = {}; Console("selectmap")')
+    ok &= check("selectmap alone lists the heists and marks the ones sold for coins as not owned",
+                any("museum" in m and "Pegasus" in m for m in values(g.Log))
+                and any("datacenter" in m and "not owned" in m for m in values(g.Log)) and len(g.Lobby.Selects) == 0)
+    lua.execute('Log = {}; Console("selectmap museum")')
+    ok &= check("selectmap picks the heist with the lobby's own SelectMap and starts nothing",
+                values(g.Lobby.Selects) == [museum] and len(g.Menu.Started) == 0
+                and lua.eval('MenuPlayers[1]["Ready?"] == false') and len(g.Calls) == 0)
+    lua.execute('Log = {}; Console("selectmap datacenter")')
+    ok &= check("a heist sold for coins that you do not own is refused",
+                len(g.Lobby.Selects) == 1 and any("sold for coins" in m for m in values(g.Log)))
+    lua.execute('Log = {}; Console("forcemap data center")')
+    ok &= check("forcemap refuses it too: nothing selected, started or travelled to",
+                len(g.Lobby.Selects) == 1 and len(g.Menu.Started) == 0 and len(g.Calls) == 0)
+    lua.execute('Console("forcemap map_aidatacenter"); Console("forcemap casino")')
+    ok &= check("and the map file names of paid heists do not get around that",
+                len(g.Lobby.Selects) == 1 and len(g.Menu.Started) == 0 and len(g.Calls) == 0)
+    lua.execute('PC.InventoryResultItems = MakeArray({ { Definition = { Value = 77 } }, { Definition = { Value = 205 } } })')
+    lua.execute('OutOfBounds = 0; Console("selectmap datacenter")')
+    ok &= check("owned in your Steam inventory (the game's own test): it can be picked",
+                values(g.Lobby.Selects)[-1] == datacenter and g.OutOfBounds == 0)
+    lua.execute(f'NewLobby(3); Loaded["{datacenter}"] = true; PC.UnlockedMaps = MakeArray({{ FakeClass("{datacenter}") }})')
+    lua.execute('Console("selectmap datacenter")')
+    ok &= check("owned through your unlocked maps: it can be picked", values(g.Lobby.Selects) == [datacenter])
+
+    lua.execute('NewLobby(3); Log = {}; Calls = {}; Console("forcemap museum")')
+    ok &= check("forcemap: selects, marks every lobby player ready, then runs the menu's own StartGame once",
+                values(g.Lobby.Selects) == [museum] and len(g.Menu.Started) == 1
+                and lua.eval(f'Menu.Started[1].map == "{museum}" and Menu.Started[1].ready == true'))
+    ok &= check("forcemap in the lobby leaves the travel to the game", len(g.Calls) == 0)
+    lua.execute('NewLobby(2); Console("selectmap wineshop"); Console("forcemap")')
+    ok &= check("forcemap alone starts the selected heist", len(g.Menu.Started) == 1
+                and lua.eval('Menu.Started[1].ready == true'))
+    lua.execute(f'NewLobby(2); Loaded["{datacenter}"] = true; Lobby.SelectedMap = FakeClass("{datacenter}"); Console("forcemap")')
+    ok &= check("forcemap alone does not start a selected paid heist you do not own", len(g.Menu.Started) == 0)
+    lua.execute('NewLobby(2); Menu.Shown = false; Log = {}; Console("forcemap museum")')
+    ok &= check("no lobby menu on screen: says so instead of starting",
+                len(g.Menu.Started) == 0 and any("not started" in m for m in values(g.Log)))
+    lua.execute('NewLobby(1); Calls = {}; Console("forcemap testmap")')
+    ok &= check("forcemap with a non-heist map file travels there with servertravel",
+                values(g.Calls) == ["servertravel TestMap"] and len(g.Menu.Started) == 0)
+    lua.execute('Lobby = nil; Menu = nil; MenuPlayers = {}; Calls = {}; GIUpdates = {}; Log = {}; Console("selectmap museum")')
+    ok &= check("selectmap outside the lobby points to forcemap", len(g.Calls) == 0
+                and any("works in the lobby" in m for m in values(g.Log)))
+    lua.execute('Console("forcemap museum")')
+    ok &= check("forcemap from inside a heist: tells the game which heist, then servertravel",
+                values(g.GIUpdates) == [museum] and values(g.Calls) == ["servertravel Museum_night"])
+    lua.execute('Calls = {}; GIUpdates = {}; PC.InventoryResultItems = MakeArray(); PC.UnlockedMaps = MakeArray(); Console("forcemap harbour")')
+    ok &= check("from inside a heist a paid heist you do not own is still refused",
+                len(g.Calls) == 0 and len(g.GIUpdates) == 0)
+    lua.execute('NewLobby(2); Authority = false; Sent = {}; Log = {}; Calls = {}; Console("forcemap museum"); Console("selectmap museum")')
+    ok &= check("guest: only the host picks the map, and nothing is sent to the host",
+                len(g.Sent) == 0 and len(g.Lobby.Selects) == 0 and len(g.Calls) == 0
+                and any("Only the host" in m for m in values(g.Log)))
+    lua.execute('Authority = true; Console("commandsharing 3"); GuestMessages = {}; GuestRequest("oar1 am1 forcemap museum")')
+    ok &= check("command sharing never lets a guest change the host's map",
+                values(g.GuestMessages)[-1].startswith("[OAR host] am1 denied forcemap") and len(g.Lobby.Selects) == 0)
+    lua.execute('Console("commandsharing 0"); NewLobby(1); Console("bind f7 forcemap museum"); KeyCallbacks["KEY_F7"]()')
+    ok &= check("forcemap works from a bind", len(g.Menu.Started) == 1)
+    lua.execute('Console("unbind f7"); Lobby = nil; Menu = nil; MenuPlayers = {}')
+
+    # --- config.lua and reloadconfig
+    default = open(os.path.join(MOD, "config.lua"), encoding="utf-8").read()
+
+    def edited(*pairs):
+        text = default
+        for a, b in pairs:
+            assert a in text, a
+            text = text.replace(a, b, 1)
+        return text
+
+    lua.execute('Authority = true; QueueDelays = false; PC.CheatManager = CM')
+    ok &= check("the values sit at the top of config.lua and every command's code is in it",
+                default.index("local V = {") < default.index('Core.Command("bind"')
+                and all(f'("{c}"' in default for c in ("bind", "unbind", "unbindall", "summon", "spawn", "summonstop", "dupe",
+                                                      "setmoney", "addmoney", "setlevel", "setxp", "maxskills", "unlockall",
+                                                      "noclip", "revive", "selectmap", "forcemap", "commandsharing", "host")))
+    write_config(tmp, edited(("SummonMax = 500,", "SummonMax = 3,")))
+    lua.execute('Summons = {}; Console("summon goldbar 99999")')
+    ok &= check("an edit does nothing until reloadconfig", len(g.Summons) == 500)
+    lua.execute('Log = {}; Summons = {}; Console("reloadconfig"); Console("summon goldbar 99999")')
+    ok &= check("reloadconfig: a changed value applies at once",
+                len(g.Summons) == 3 and any("Loaded config.lua" in m for m in values(g.Log)))
+    write_config(tmp, edited(('return "Stopped all summon batches"', 'return "No more summons"')))
+    lua.execute('Log = {}; Console("reloadconfig"); Console("summonstop")')
+    ok &= check("reloadconfig: changed command code applies at once", "No more summons" in values(g.Log))
+    write_config(tmp, default + """
+Core.Command("hello", function(FullCommand, Parameters, Ar)
+    Core.Say(Ar, "hello " .. (Parameters[1] or "you"))
+    return true
+end)
+""")
+    lua.execute('Log = {}; Console("reloadconfig"); Console("hello there")')
+    ok &= check("reloadconfig: a command added to the file works", "hello there" in values(g.Log))
+    write_config(tmp, default)
+    lua.execute('Console("reloadconfig"); r = Console("hello there")')
+    ok &= check("reloadconfig: a command removed from the file goes back to the engine", g.r is False)
+
+    write_config(tmp, edited(("SummonMax = 500,", "SummonMax = 500,,")))
+    lua.execute('Log = {}; Summons = {}; Console("reloadconfig"); Console("summon goldbar 2")')
+    ok &= check("a syntax error is reported with its line, and the commands from before keep working",
+                any("NOT loaded" in m for m in values(g.Log)) and any("config.lua:" in m for m in values(g.Log))
+                and len(g.Summons) == 2)
+    write_config(tmp, default + "\nlocal broken = nil\nbroken.field = 1\n")
+    lua.execute('Log = {}; Summons = {}; Console("reloadconfig"); Console("summon goldbar 2"); Console("bind")')
+    ok &= check("an error while the file loads is reported too, and nothing is half loaded",
+                any("NOT loaded" in m for m in values(g.Log)) and len(g.Summons) == 2)
+    write_config(tmp, edited(('local keyName = KeyFromText(Parameters[1])\n    if not keyName then Say(Ar, "Usage: unbind <key>")',
+                              'local keyName = NoSuchFunction(Parameters[1])\n    if not keyName then Say(Ar, "Usage: unbind <key>")')))
+    lua.execute('Log = {}; Console("reloadconfig"); r = Console("unbind x")')
+    ok &= check("a command that breaks while it runs says so and does not reach the engine",
+                g.r is True and any(m.startswith("unbind failed:") and "config.lua:" in m for m in values(g.Log)))
+
+    write_config(tmp, default)
+    lua.execute('Console("reloadconfig"); Console("commandsharing 2"); Console("bind f8 god"); Calls = {}')
+    lua.execute('Console("noclip"); Console("reloadconfig"); Log = {}; Console("commandsharing"); KeyCallbacks["KEY_F8"]()')
+    ok &= check("kept across reloadconfig: sharing level, binds, noclip",
+                any("Command sharing is 2" in m for m in values(g.Log)) and values(g.Calls) == ["god"]
+                and g.Pawn.CharacterMovement.Mode == 5)
+    lua.execute(f'KeyDown = false; KeysDown = {{ SpaceBar = true }}; Pawn.Inputs = {{}}; Hooks["{frame}"](Param(Pawn)); KeysDown = {{}}; KeyDown = true')
+    ok &= check("noclip's Space still works after reloadconfig", lua.eval("#Pawn.Inputs == 1 and Pawn.Inputs[1].v == 1"))
+    lua.execute('Console("noclip"); Console("commandsharing 0"); Console("unbind f8")')
+    ok &= check("noclip turned on before a reload can be turned off after it", g.Pawn.CharacterMovement.Mode == 3)
+    ok &= check("nothing is ever registered with UE4SS twice, however often the config loads",
+                all(n == 1 for n in g.Registrations.values()) and g.Registrations["command summon"] == 1
+                and g.Registrations["hook /Script/Engine.PlayerController:ServerExecRPC"] == 1)
+
+    write_config(tmp, edited(("SummonMax = 500,", "SummonMax = 7,")), "config.default.lua")
+    lua.execute('Log = {}; Summons = {}; Console("reloadconfig default"); Console("summon goldbar 99999")')
+    ok &= check("reloadconfig default loads config.default.lua", len(g.Summons) == 7
+                and any("Loaded config.default.lua" in m for m in values(g.Log)))
+    lua.execute('Log = {}; Console("reloadconfig nonsense")')
+    ok &= check("reloadconfig with anything else shows the usage", any("Usage: reloadconfig" in m for m in values(g.Log)))
+    lua.execute('Summons = {}; Console("reloadconfig"); Console("summon goldbar 99999"); Console("bind f9 reloadconfig"); KeyCallbacks["KEY_F9"](); Console("unbind f9")')
+    ok &= check("back on config.lua, and reloadconfig works from a bind", len(g.Summons) == 500)
+
+    broken_tmp = tempfile.mkdtemp()
+    lua3, _ = make_runtime(broken_tmp, default.replace("local V = {", "local V = {{", 1))
+    g3 = lua3.globals()
+    ok &= check("a broken config.lua at game start: only reloadconfig exists",
+                g3.Handlers["summon"] is None and g3.Handlers["reloadconfig"] is not None)
+    write_config(broken_tmp, default)
+    lua3.execute('Console("reloadconfig"); Console("summon goldbar 2")')
+    ok &= check("and after fixing the file, reloadconfig brings every command back", len(g3.Summons) == 2)
 
     # --- restart
     lua2, _ = make_runtime(tmp)

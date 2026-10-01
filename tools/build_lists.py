@@ -147,6 +147,9 @@ QUICK_START = [
     ("maxskills / unlockall", "every skill at top tier / every cash-bought weapon, mod, tool, armor (mod)"),
     ("noclip", "fly through walls: WASD, Space up, Ctrl down, Shift faster; again to land (mod)"),
     ("revive", "get back up with full health (mod)"),
+    ("selectmap museum", "host: pick the heist from the console; selectmap alone lists them (mod)"),
+    ("forcemap museum", "host: start a map now for everyone, no ready-up or countdown (mod)"),
+    ("reloadconfig", "load Mods\\OARCommands\\config.lua again after editing it: every command's values and code (mod)"),
     ("commandsharing 1", "host: guests with the mod can run commands through your game (mod; 0-3)"),
     ("DestroyTarget", "delete what you are looking at"),
     ("DestroyAll NPC_Police_base_C", "delete every cop on the map"),
@@ -240,6 +243,7 @@ def build_commands(objs, cvars, maps, engine_words):
     w("ONE-ARMED ROBBER: CONSOLE COMMANDS THAT WORK")
     w("=" * 78)
     w("Game build : Unreal Engine 4.27 shipping (OAR-Win64-Shipping.exe, 2026-08-23)")
+    w("Game files : the Data Center heist update of 2026-10-01 (the exe did not change)")
     w("Console    : opened with ~ once the OARCommands installer (UE4SS) is in, or with UUU")
     w("Built from : a UUU object + console variable dump, the game's exe and its pak files")
     w("Commands are not case-sensitive. Spawning is in OAR_Spawn_Commands.txt.")
@@ -257,7 +261,8 @@ def build_commands(objs, cvars, maps, engine_words):
     w("    type  EnableCheats  (works in solo play only).")
     w("  * The mod adds: bind / unbind / unbindall, summon <name> [count], summonstop, dupe [count],")
     w("    setmoney / addmoney / setlevel / setxp / maxskills / unlockall, noclip, revive,")
-    w("    commandsharing / host. See the project README.")
+    w("    selectmap / forcemap, commandsharing / host, reloadconfig. All of their values and code are in")
+    w("    Mods\\OARCommands\\config.lua, which you can edit. See the project README.")
     w("")
     w("QUICK START")
     w("-" * 78)

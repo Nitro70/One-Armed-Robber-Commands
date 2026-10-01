@@ -1,6 +1,6 @@
 ONE-ARMED ROBBER: SPAWN COMMANDS
 ==============================================================================
-All 1052 spawnable Blueprints in the game, read from the game's asset registry.
+All 1058 spawnable Blueprints in the game, read from the game's asset registry.
 
 HOW TO USE (with the OARCommands mod installed)
   summon <name> [count]     e.g.  summon Goldbar_C   or   summon goldbar 10
@@ -21,7 +21,7 @@ RULES
   * OAR_Full_Object_List.txt shows which maps each thing is placed on.
 
 
-LOOT AND VALUABLES (pickup items: grab and bag them)  [32]
+LOOT AND VALUABLES (pickup items: grab and bag them)  [34]
 ------------------------------------------------------------------------------
   summon BP_draggable_militaryCrate_Beaker_C
   summon BP_draggable_militaryCrate_C
@@ -46,7 +46,9 @@ LOOT AND VALUABLES (pickup items: grab and bag them)  [32]
   summon Valuable_beaker_C
   summon Valuable_Bonds_C
   summon Valuable_CircuitBoard_C
+  summon Valuable_RAM_C
   summon Valuable_Rocket_C
+  summon Valuable_SSD_C
   summon Valuable_wine_AmaroneRossoSegreto_C
   summon Valuable_wine_ChateauMirage_C
   summon Valuable_wine_CuveeEclat_C
@@ -236,7 +238,7 @@ CASINO PROPS (slot machines, roulette, fountains...)  [20]
   summon NewBlueprint_C
 
 
-SECURITY, DOORS, PUZZLES AND HEIST OBJECTS  [51]
+SECURITY, DOORS, PUZZLES AND HEIST OBJECTS  [53]
 ------------------------------------------------------------------------------
   summon AlarmBP_C
   summon BoxDispenserFlap_C
@@ -271,6 +273,7 @@ SECURITY, DOORS, PUZZLES AND HEIST OBJECTS  [51]
   summon DoorBP_Locked_C
   summon Elevator_BP_C
   summon ElevatorPanel_BP_C
+  summon FanSpinner_BP_C
   summon GarageDoor_C
   summon JewelryStand_C
   summon LampBP_C
@@ -284,6 +287,7 @@ SECURITY, DOORS, PUZZLES AND HEIST OBJECTS  [51]
   summon SecurityTag_C
   summon SecurityTagDetector_C
   summon Sign_C
+  summon SimonGame_BP_C
   summon TutorialAlarmBP_C
   summon Vault_DoorRectangle_C
   summon VaultDefault_C
@@ -494,7 +498,7 @@ CHARMS AND EMOTE PROPS  [18]
   summon EmoteBPBase_MakeItRain_C
 
 
-LOBBY SHOP / MENU DISPLAY OBJECTS (spawn the shop display, not the item)  [448]
+LOBBY SHOP / MENU DISPLAY OBJECTS (spawn the shop display, not the item)  [449]
 ------------------------------------------------------------------------------
   summon Equipmentshelf_equipment_AdvancedLockPick_C
   summon Equipmentshelf_equipment_AngleGrinder_C
@@ -597,6 +601,7 @@ LOBBY SHOP / MENU DISPLAY OBJECTS (spawn the shop display, not the item)  [448]
   summon ShopItem_Map_base_C
   summon ShopItem_Map_BlackDiamondCasino_C
   summon ShopItem_Map_CarMansion_C
+  summon ShopItem_Map_Datacenter_C
   summon ShopItem_Map_EscoBar_C
   summon ShopItem_Map_FIA_C
   summon ShopItem_Map_Harbour_C
@@ -1060,7 +1065,7 @@ UNREAL ENGINE BUILT-IN ACTORS (always loaded, plain summon works)
   summon CameraActor                        a camera (look through it with ViewActor <its name>)
 
 
-BEHIND-THE-SCENES CLASSES (they spawn, but do nothing useful or can break the round)  [89]
+BEHIND-THE-SCENES CLASSES (they spawn, but do nothing useful or can break the round)  [90]
 ------------------------------------------------------------------------------
   summon Ambiance_C
   summon AppearancePreview_C
@@ -1096,6 +1101,7 @@ BEHIND-THE-SCENES CLASSES (they spawn, but do nothing useful or can break the ro
   summon Instruction_base_Test_C
   summon Instruction_CarMansion_C
   summon Instruction_Casino_C
+  summon Instruction_DataCenter_C
   summon Instruction_FIA_base_C
   summon Instruction_Harbour_C
   summon Instruction_Jewellery_C

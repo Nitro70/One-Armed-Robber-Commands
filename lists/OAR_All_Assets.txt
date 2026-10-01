@@ -1,11 +1,11 @@
 ONE-ARMED ROBBER: EVERY ASSET IN THE GAME
 ==============================================================================
-15741 assets from the game's asset registry, grouped by type (biggest groups first).
+15809 assets from the game's asset registry, grouped by type (biggest groups first).
 
-  StaticMesh 8198, BlueprintGeneratedClass 1166, Blueprint 1157, Texture2D 1061, SkeletalMesh 858, PhysicsAsset 780, Skeleton 725, Material 567, SoundWave 200, MaterialInstanceConstant 131, NiagaraScript 126, AnimSequence 118, WidgetBlueprint 102, WidgetBlueprintGeneratedClass 102, ParticleSystem 76, World 52, MaterialFunction 45, UserDefinedEnum 40, NiagaraSystem 30, MapBuildDataRegistry 28, SoundCue 25, PaperSprite 16, UserDefinedStruct 16, AnimBlueprint 11, AnimBlueprintGeneratedClass 11, FontFace 11, Font 11, PhysicalMaterial 9, SoundAttenuation 7, StreamMediaSource 6, SoundClass 6, PaperFlipbook 4, VolumeTexture 4, BlendSpace 3, TextureRenderTarget2D 3, SoundConcurrency 3, CurveLinearColor 3, SoundSubmix 3, VectorFieldStatic 3, BlendSpace1D 2, DataTable 2, AnimBoneCompressionSettings 2, TextureCube 2, TouchInterface 2, BehaviorTree 1, BlackboardData 1, ObjectRedirector 1, CanvasRenderTarget2D 1, ReverbEffect 1, MediaPlayer 1, MediaTexture 1, AnimCurveCompressionSettings 1, Rig 1, SoundMix 1, SubmixEffectSubmixEQPreset 1, SubmixEffectReverbFastPreset 1, CurveFloat 1, PaperTerrainMaterial 1
+  StaticMesh 8215, BlueprintGeneratedClass 1172, Blueprint 1163, Texture2D 1069, SkeletalMesh 858, PhysicsAsset 780, Skeleton 725, Material 570, SoundWave 215, MaterialInstanceConstant 138, NiagaraScript 126, AnimSequence 118, WidgetBlueprint 102, WidgetBlueprintGeneratedClass 102, ParticleSystem 76, World 53, MaterialFunction 45, UserDefinedEnum 40, NiagaraSystem 31, MapBuildDataRegistry 29, SoundCue 25, PaperSprite 16, UserDefinedStruct 16, AnimBlueprint 11, AnimBlueprintGeneratedClass 11, FontFace 11, Font 11, PhysicalMaterial 9, SoundAttenuation 7, StreamMediaSource 6, SoundClass 6, PaperFlipbook 4, VolumeTexture 4, BlendSpace 3, TextureRenderTarget2D 3, SoundConcurrency 3, CurveLinearColor 3, SoundSubmix 3, VectorFieldStatic 3, BlendSpace1D 2, DataTable 2, LandscapeLayerInfoObject 2, AnimBoneCompressionSettings 2, TextureCube 2, TouchInterface 2, FileMediaSource 1, BehaviorTree 1, BlackboardData 1, ObjectRedirector 1, CanvasRenderTarget2D 1, ReverbEffect 1, MediaPlayer 1, MediaTexture 1, AnimCurveCompressionSettings 1, Rig 1, SoundMix 1, SubmixEffectSubmixEQPreset 1, SubmixEffectReverbFastPreset 1, CurveFloat 1, PaperTerrainMaterial 1
 
 
-StaticMesh  [8198]
+StaticMesh  [8215]
 ------------------------------------------------------------------------------
   /Engine/ArtTools/RenderToTexture/Meshes/S_1_Unit_Plane
   /Engine/BasicShapes/Cone
@@ -8033,6 +8033,21 @@ StaticMesh  [8198]
   /Game/Meshes/CarLiftMesh
   /Game/Meshes/ConcreteBreaker
   /Game/Meshes/DrillMesh
+  /Game/Meshes/SimonGame/SimonPanel_SM_SimonPanel_Base_01
+  /Game/Meshes/SimonGame/SimonPanel_SM_SimonPanel_GreenButton_01
+  /Game/Meshes/SimonGame/SimonPanel_SM_SimonPanel_LifeLight_01
+  /Game/Meshes/SimonGame/SimonPanel_SM_SimonPanel_LifeLight_02
+  /Game/Meshes/SimonGame/SimonPanel_SM_SimonPanel_LifeLight_03
+  /Game/Meshes/SimonGame/SimonPanel_SM_SimonPanel_RedBlue_01
+  /Game/Meshes/SimonGame/SimonPanel_SM_SimonPanel_RedButton_01
+  /Game/Meshes/SimonGame/SimonPanel_SM_SimonPanel_YellowButton_01
+  /Game/Meshes/SimonGame/SimonPanelBase_SM_SimonPanel_GreenButton_01
+  /Game/Meshes/SimonGame/SimonPanelBase_SM_SimonPanel_LifeLight_01
+  /Game/Meshes/SimonGame/SimonPanelBase_SM_SimonPanel_LifeLight_02
+  /Game/Meshes/SimonGame/SimonPanelBase_SM_SimonPanel_LifeLight_03
+  /Game/Meshes/SimonGame/SimonPanelBase_SM_SimonPanel_RedBlue_01
+  /Game/Meshes/SimonGame/SimonPanelBase_SM_SimonPanel_RedButton_01
+  /Game/Meshes/SimonGame/SimonPanelBase_SM_SimonPanel_YellowButton_01
   /Game/Meshes/SK_Prop_Missle_Launcher_02
   /Game/Meshes/SK_Veh_Car_Medium_01
   /Game/Meshes/SK_Veh_Car_Taxi_01
@@ -8191,11 +8206,13 @@ StaticMesh  [8198]
   /Game/Models/SM_LowPolySphere
   /Game/Models/SM_Mk47
   /Game/Models/SM_Prop_CircuitBoard
+  /Game/Models/SM_Prop_Ram
   /Game/Models/SM_ShotgunCasing
   /Game/Models/SM_Tool_AdvancedLockpick
   /Game/Models/SM_Tool_BatteringRam
   /Game/Models/SM_Tool_ExpertLockpick
   /Game/Models/SM_Tool_StickyDrill
+  /Game/Models/SM_TrainingData
   /Game/Models/SM_Wep_Grenade
   /Game/Models/Smoke
   /Game/Models/StatueOfDavid
@@ -8207,7 +8224,7 @@ StaticMesh  [8198]
   /ThumbnailGenerator/SkySphere/SM_Thumbnail_SkySphere
 
 
-BlueprintGeneratedClass  [1166]
+BlueprintGeneratedClass  [1172]
 ------------------------------------------------------------------------------
   /Engine/EngineDamageTypes/DmgTypeBP_Environmental
   /Engine/EngineSky/BP_Sky_Sphere
@@ -8580,6 +8597,7 @@ BlueprintGeneratedClass  [1166]
   /Game/BP/Instructions/Maps/Instruction_base_Test
   /Game/BP/Instructions/Maps/Instruction_CarMansion
   /Game/BP/Instructions/Maps/Instruction_Casino
+  /Game/BP/Instructions/Maps/Instruction_DataCenter
   /Game/BP/Instructions/Maps/Instruction_FIA_base
   /Game/BP/Instructions/Maps/Instruction_Harbour
   /Game/BP/Instructions/Maps/Instruction_Jewellery
@@ -8640,6 +8658,8 @@ BlueprintGeneratedClass  [1166]
   /Game/BP/Items/Valuables/Statue_museum
   /Game/BP/Items/Valuables/Valuable_beaker
   /Game/BP/Items/Valuables/Valuable_Bonds
+  /Game/BP/Items/Valuables/Valuable_RAM
+  /Game/BP/Items/Valuables/Valuable_SSD
   /Game/BP/Items/Valuables/ValuableCounter
   /Game/BP/Items/Valuables/Wines/Valuable_wine_AmaroneRossoSegreto
   /Game/BP/Items/Valuables/Wines/Valuable_wine_ChateauMirage
@@ -8885,6 +8905,7 @@ BlueprintGeneratedClass  [1166]
   /Game/BP/Puzzle/PuzzleInterface
   /Game/BP/Puzzle/SecurityTags/SecurityTag
   /Game/BP/Puzzle/SecurityTags/SecurityTagDetector
+  /Game/BP/Puzzle/SimonGame/SimonGame_BP
   /Game/BP/Puzzle/SwitchBox/BP_switchbox
   /Game/BP/Puzzle/SwitchBox/BP_Switchbox_button
   /Game/BP/Puzzle/SwitchBox/BP_switchbox_switch
@@ -8923,6 +8944,7 @@ BlueprintGeneratedClass  [1166]
   /Game/BP/Utility/DoorInterface
   /Game/BP/Utility/Elevator/Elevator_BP
   /Game/BP/Utility/Elevator/ElevatorPanel_BP
+  /Game/BP/Utility/FanSpinner_BP
   /Game/BP/Utility/GlassInterface
   /Game/BP/Utility/LampBp
   /Game/BP/Utility/LaserSensor
@@ -9054,6 +9076,7 @@ BlueprintGeneratedClass  [1166]
   /Game/Maps/Menu/BP/Shop/Maps/ShopItem_Map_base
   /Game/Maps/Menu/BP/Shop/Maps/ShopItem_Map_BlackDiamondCasino
   /Game/Maps/Menu/BP/Shop/Maps/ShopItem_Map_CarMansion
+  /Game/Maps/Menu/BP/Shop/Maps/ShopItem_Map_Datacenter
   /Game/Maps/Menu/BP/Shop/Maps/ShopItem_Map_EscoBar
   /Game/Maps/Menu/BP/Shop/Maps/ShopItem_Map_FIA
   /Game/Maps/Menu/BP/Shop/Maps/ShopItem_Map_Harbour
@@ -9377,7 +9400,7 @@ BlueprintGeneratedClass  [1166]
   /ThumbnailGenerator/SkySphere/BP_ThumbnailGenerator_SkySphere
 
 
-Blueprint  [1157]
+Blueprint  [1163]
 ------------------------------------------------------------------------------
   /Engine/EngineDamageTypes/DmgTypeBP_Environmental
   /Engine/EngineSky/BP_Sky_Sphere
@@ -9746,6 +9769,7 @@ Blueprint  [1157]
   /Game/BP/Instructions/Maps/Instruction_base_Test
   /Game/BP/Instructions/Maps/Instruction_CarMansion
   /Game/BP/Instructions/Maps/Instruction_Casino
+  /Game/BP/Instructions/Maps/Instruction_DataCenter
   /Game/BP/Instructions/Maps/Instruction_FIA_base
   /Game/BP/Instructions/Maps/Instruction_Harbour
   /Game/BP/Instructions/Maps/Instruction_Jewellery
@@ -9806,6 +9830,8 @@ Blueprint  [1157]
   /Game/BP/Items/Valuables/Statue_museum
   /Game/BP/Items/Valuables/Valuable_beaker
   /Game/BP/Items/Valuables/Valuable_Bonds
+  /Game/BP/Items/Valuables/Valuable_RAM
+  /Game/BP/Items/Valuables/Valuable_SSD
   /Game/BP/Items/Valuables/ValuableCounter
   /Game/BP/Items/Valuables/Wines/Valuable_wine_AmaroneRossoSegreto
   /Game/BP/Items/Valuables/Wines/Valuable_wine_ChateauMirage
@@ -10051,6 +10077,7 @@ Blueprint  [1157]
   /Game/BP/Puzzle/PuzzleInterface
   /Game/BP/Puzzle/SecurityTags/SecurityTag
   /Game/BP/Puzzle/SecurityTags/SecurityTagDetector
+  /Game/BP/Puzzle/SimonGame/SimonGame_BP
   /Game/BP/Puzzle/SwitchBox/BP_switchbox
   /Game/BP/Puzzle/SwitchBox/BP_Switchbox_button
   /Game/BP/Puzzle/SwitchBox/BP_switchbox_switch
@@ -10089,6 +10116,7 @@ Blueprint  [1157]
   /Game/BP/Utility/DoorInterface
   /Game/BP/Utility/Elevator/Elevator_BP
   /Game/BP/Utility/Elevator/ElevatorPanel_BP
+  /Game/BP/Utility/FanSpinner_BP
   /Game/BP/Utility/GlassInterface
   /Game/BP/Utility/LampBp
   /Game/BP/Utility/LaserSensor
@@ -10216,6 +10244,7 @@ Blueprint  [1157]
   /Game/Maps/Menu/BP/Shop/Maps/ShopItem_Map_base
   /Game/Maps/Menu/BP/Shop/Maps/ShopItem_Map_BlackDiamondCasino
   /Game/Maps/Menu/BP/Shop/Maps/ShopItem_Map_CarMansion
+  /Game/Maps/Menu/BP/Shop/Maps/ShopItem_Map_Datacenter
   /Game/Maps/Menu/BP/Shop/Maps/ShopItem_Map_EscoBar
   /Game/Maps/Menu/BP/Shop/Maps/ShopItem_Map_FIA
   /Game/Maps/Menu/BP/Shop/Maps/ShopItem_Map_Harbour
@@ -10538,7 +10567,7 @@ Blueprint  [1157]
   /ThumbnailGenerator/SkySphere/BP_ThumbnailGenerator_SkySphere
 
 
-Texture2D  [1061]
+Texture2D  [1069]
 ------------------------------------------------------------------------------
   /Engine/EngineMaterials/BaseFlattenDiffuseMap
   /Engine/EngineMaterials/BaseFlattenEmissiveMap
@@ -11277,6 +11306,13 @@ Texture2D  [1061]
   /Game/Maps/Menu/BP/Shop/Maps/Preview/Casino/UI_Image_Casino__4_
   /Game/Maps/Menu/BP/Shop/Maps/Preview/Casino/UI_Image_Casino__5_
   /Game/Maps/Menu/BP/Shop/Maps/Preview/Casino/UI_Image_Casino__6_
+  /Game/Maps/Menu/BP/Shop/Maps/Preview/Datacenter/Icon_Datacenter
+  /Game/Maps/Menu/BP/Shop/Maps/Preview/Datacenter/SC_Datacenter__1_
+  /Game/Maps/Menu/BP/Shop/Maps/Preview/Datacenter/SC_Datacenter__2_
+  /Game/Maps/Menu/BP/Shop/Maps/Preview/Datacenter/SC_Datacenter__3_
+  /Game/Maps/Menu/BP/Shop/Maps/Preview/Datacenter/SC_Datacenter__4_
+  /Game/Maps/Menu/BP/Shop/Maps/Preview/Datacenter/SC_Datacenter__5_
+  /Game/Maps/Menu/BP/Shop/Maps/Preview/Datacenter/SC_Datacenter__6_
   /Game/Maps/Menu/BP/Shop/Maps/Preview/EscoBar/UI_Image_Escobar__1_
   /Game/Maps/Menu/BP/Shop/Maps/Preview/EscoBar/UI_Image_Escobar__2_
   /Game/Maps/Menu/BP/Shop/Maps/Preview/EscoBar/UI_Image_Escobar__3_
@@ -11451,6 +11487,7 @@ Texture2D  [1061]
   /Game/UI/Icons/Maps/Objectives/Icon_Objective_Gold
   /Game/UI/Icons/Maps/Objectives/Icon_Objective_Jewellery
   /Game/UI/Icons/Maps/Objectives/Icon_Objective_MonaLisa
+  /Game/UI/Icons/Maps/Objectives/Icon_Objective_TrainingData
   /Game/UI/Icons/Maps/Objectives/Icon_Objective_wine
   /Game/UI/Icons/Maps/Setups/icon_Map_Setup_DeliverSchedule
   /Game/UI/Icons/Maps/Setups/Icon_Setup_ButtonBorder
@@ -13978,7 +14015,7 @@ Skeleton  [725]
   /Game/Models/Rats/Rat_fixed_Skeleton
 
 
-Material  [567]
+Material  [570]
 ------------------------------------------------------------------------------
   /Engine/ArtTools/RenderToTexture/Materials/Debug/M_Emissive_Color
   /Engine/BasicShapes/BasicShapeMaterial
@@ -14128,6 +14165,7 @@ Material  [567]
   /Game/Assets/PolygonCity/Materials/Mat_PolygonCity_Glass_Car_Windows
   /Game/Assets/PolygonCity/Materials/Mat_PolygonCity_Glass_Windows
   /Game/Assets/PolygonCity/Materials/Mat_PolygonCity_Skyline
+  /Game/Assets/PolygonCity/Materials/Mat_PolygonCity_Skyline_Dark
   /Game/Assets/PolygonCity/Materials/Mat_PolygonCity_Texture_01_A
   /Game/Assets/PolygonCity/Materials/Mat_PolygonCity_Texture_01_A_Emissive
   /Game/Assets/PolygonCity/Materials/Mat_PolygonCity_Texture_01_B
@@ -14514,6 +14552,7 @@ Material  [567]
   /Game/Mats/HighlightMat
   /Game/Mats/Hotel_whiteConcrete
   /Game/Mats/Kerchief_Mat
+  /Game/Mats/Landscape/Landscape_MAT
   /Game/Mats/LaserBeam_mat
   /Game/Mats/Line_Decal_Mat
   /Game/Mats/Mat_ColorChangingChemical
@@ -14526,6 +14565,7 @@ Material  [567]
   /Game/Mats/ParticleGlowMat
   /Game/Mats/Particlemat
   /Game/Mats/ScopeMats/ScopeMat_base
+  /Game/Mats/SimonGame/Mat_ProgressBar
   /Game/Mats/TextureBaseMat
   /Game/Mats/Textures/T_FX_Rain_Mat
   /Game/Mats/Textures/Texture_Handprint_Mat
@@ -14549,7 +14589,7 @@ Material  [567]
   /ThumbnailGenerator/ThumbnailOutline/PP_Thumbnail_Outliner_WithAlpha
 
 
-SoundWave  [200]
+SoundWave  [215]
 ------------------------------------------------------------------------------
   /Game/Animation/Emote/Golf/EmoteGolfHit
   /Game/Animation/Emote/Guitar/Riff
@@ -14571,10 +14611,15 @@ SoundWave  [200]
   /Game/Sounds/Ambiance/Sound_Ambient_Casino
   /Game/Sounds/Ambiance/Sound_Ambient_city
   /Game/Sounds/Ambiance/Sound_Ambient_CityNature
+  /Game/Sounds/Ambiance/Sound_Ambient_CoolingFans
+  /Game/Sounds/Ambiance/Sound_Ambient_CoolingRoom
   /Game/Sounds/Ambiance/Sound_Ambient_EmptyRoom
   /Game/Sounds/Ambiance/Sound_Ambient_Harbour
   /Game/Sounds/Ambiance/Sound_Ambient_MallInterior
   /Game/Sounds/Ambiance/Sound_Ambient_officeQuiet
+  /Game/Sounds/Ambiance/Sound_Ambient_PipeTunnel
+  /Game/Sounds/Ambiance/Sound_Ambient_ServerRoom1
+  /Game/Sounds/Ambiance/Sound_Ambient_ServerRoom2
   /Game/Sounds/Ambiance/Sound_Ambient_ShopInterior
   /Game/Sounds/Ambiance/Sound_Ambient_Talking
   /Game/Sounds/BarbedWireMovementSound
@@ -14592,6 +14637,7 @@ SoundWave  [200]
   /Game/Sounds/Cinematic_bass_hit
   /Game/Sounds/Close_Metal_Door
   /Game/Sounds/ConcreteHammer
+  /Game/Sounds/CoolingFans_PoweringDown
   /Game/Sounds/CrossedWires
   /Game/Sounds/CrossWires
   /Game/Sounds/Door_close
@@ -14713,6 +14759,15 @@ SoundWave  [200]
   /Game/Sounds/Screams/Sound_FX_Scream5
   /Game/Sounds/Screams/Sound_FX_Scream6
   /Game/Sounds/Screams/Sound_FX_Scream7
+  /Game/Sounds/SimonGame/Sound_Simon_Blue
+  /Game/Sounds/SimonGame/Sound_Simon_Green
+  /Game/Sounds/SimonGame/Sound_Simon_KeyPress
+  /Game/Sounds/SimonGame/Sound_Simon_KeyPress2
+  /Game/Sounds/SimonGame/Sound_Simon_Red
+  /Game/Sounds/SimonGame/Sound_Simon_StartUp
+  /Game/Sounds/SimonGame/Sound_Simon_VictoryBeeps
+  /Game/Sounds/SimonGame/Sound_Simon_VictoryFanFare
+  /Game/Sounds/SimonGame/Sound_Yellow
   /Game/Sounds/SlotMachine/Sound_FX_SlotMachineLoop
   /Game/Sounds/SlotMachine/Sound_FX_SlotmachineStop
   /Game/Sounds/SmallSwitch
@@ -14753,7 +14808,7 @@ SoundWave  [200]
   /Game/Sounds/WhiteBoardLine
 
 
-MaterialInstanceConstant  [131]
+MaterialInstanceConstant  [138]
 ------------------------------------------------------------------------------
   /Engine/EngineMaterials/Widget3DPassThrough_Masked
   /Engine/EngineMaterials/Widget3DPassThrough_Masked_OneSided
@@ -14767,6 +14822,10 @@ MaterialInstanceConstant  [131]
   /Game/Assets/BPBuildingTools/FX_Env/FXTextures/CustomSpriteColorsMaterial/CustomColorLitSpriteMaterial_Blue
   /Game/Assets/BPBuildingTools/FX_Env/FXTextures/CustomSpriteColorsMaterial/CustomColorLitSpriteMaterial_Green
   /Game/Assets/PolygonCasino/Materials/Alts/M_PolygonCasino_Texture_01_A_Shiny
+  /Game/Assets/PolygonCasino/Materials/Walls_Floors/M_Concrete_Dark_inst
+  /Game/Assets/PolygonCasino/Materials/Walls_Floors/M_Concrete_Grey_Inst
+  /Game/Assets/PolygonCasino/Materials/Walls_Floors/M_Concrete_White_Inst
+  /Game/Assets/PolygonNightClubs/Materials/Walls_Floors/M_Wall_05_Lighter_Inst
   /Game/Assets/PolygonStreetRacer/Materials/Cars/MI_PolygonStreetRacer_Car_01
   /Game/Assets/PolygonStreetRacer/Materials/Cars/MI_PolygonStreetRacer_Car_02
   /Game/Assets/PolygonStreetRacer/Materials/Cars/MI_PolygonStreetRacer_Car_03
@@ -14825,12 +14884,14 @@ MaterialInstanceConstant  [131]
   /Game/Mats/CameraRenderTarget/Scope/ScopePattern_ZoomScope
   /Game/Mats/Color_beige
   /Game/Mats/Color_Black_RatMat
+  /Game/Mats/Color_BlueGray
   /Game/Mats/Color_casing
   /Game/Mats/Color_Concrete_White
   /Game/Mats/Color_DarkGray
   /Game/Mats/Color_DarkGreen
   /Game/Mats/Color_gray
   /Game/Mats/Color_green_grass
+  /Game/Mats/Color_LightGray
   /Game/Mats/Color_LightGreen
   /Game/Mats/Color_limestone_Gray
   /Game/Mats/Color_orange
@@ -14866,6 +14927,7 @@ MaterialInstanceConstant  [131]
   /Game/Mats/ParticleGlowMat_Intense
   /Game/Mats/ScopeMats/Reddot_mat
   /Game/Mats/ScopeMats/Reddot_star_mat
+  /Game/Mats/SimonGame/Mat_ProgressBar_Inst
   /Game/Mats/SkinColors/Skin_Black
   /Game/Mats/SkinColors/Skin_DarkWhite
   /Game/Mats/SkinColors/Skin_LightBlack
@@ -15432,7 +15494,7 @@ ParticleSystem  [76]
   /Game/Models/Particles/PowerboxSparks
 
 
-World  [52]
+World  [53]
 ------------------------------------------------------------------------------
   /Engine/Maps/Entry
   /Game/Assets/PolygonCasino/Maps/Demo_Scene
@@ -15459,6 +15521,7 @@ World  [52]
   /Game/Maps/HeistMaps/JewelleryStore
   /Game/Maps/HeistMaps/Knightsbridge_day
   /Game/Maps/HeistMaps/Mansion_Car
+  /Game/Maps/HeistMaps/Map_AIDataCenter
   /Game/Maps/HeistMaps/Map_Harbour
   /Game/Maps/HeistMaps/Map_PostalOffice
   /Game/Maps/HeistMaps/Map_Sciencelab
@@ -15581,7 +15644,7 @@ UserDefinedEnum  [40]
   /Niagara/Enums/SpriteRenderer/ENiagara_ScaleSpriteSize
 
 
-NiagaraSystem  [30]
+NiagaraSystem  [31]
 ------------------------------------------------------------------------------
   /Game/Animation/Emote/Golf/Golfing
   /Game/Animation/Emote/Golf/GolfingBall
@@ -15609,13 +15672,14 @@ NiagaraSystem  [30]
   /Game/Assets/PolygonStreetRacer/FX/FX_Rain_01
   /Game/Assets/PolygonStreetRacer/FX/FX_Skid_Smoke_Dark_01
   /Game/Assets/PolygonStreetRacer/FX/FX_Skid_Smoke_White_01
+  /Game/Assets/PolygonStreetRacer/FX/FX_Steam_Smoke_01
   /Game/Assets/PolygonStreetRacer/FX/FX_Vent_Steam_01
   /Game/Assets/PolygonStreetRacer/FX/FX_Vent_Steam_Line_01
   /Game/Models/Particles/GlassBreak/GlassBreakSystem
   /Game/Models/Particles/NewYearsHatFountain
 
 
-MapBuildDataRegistry  [28]
+MapBuildDataRegistry  [29]
 ------------------------------------------------------------------------------
   /Engine/Maps/Entry_BuiltData
   /Game/Assets/PolygonCasino/Maps/Demo_Scene_BuiltData
@@ -15637,6 +15701,7 @@ MapBuildDataRegistry  [28]
   /Game/Maps/HeistMaps/JewelleryStore_BuiltData
   /Game/Maps/HeistMaps/Knightsbridge_day_BuiltData
   /Game/Maps/HeistMaps/Mansion_Car_BuiltData
+  /Game/Maps/HeistMaps/Map_AIDataCenter_BuiltData
   /Game/Maps/HeistMaps/Map_Harbour_BuiltData
   /Game/Maps/HeistMaps/Map_PostalOffice_BuiltData
   /Game/Maps/HeistMaps/Map_Sciencelab_BuiltData
@@ -15890,6 +15955,12 @@ DataTable  [2]
   /Game/BP/Guns/WeaponSkins/DT_WeaponSkins
 
 
+LandscapeLayerInfoObject  [2]
+------------------------------------------------------------------------------
+  /Game/Mats/Landscape/Dirt_LayerInfo
+  /Game/Mats/Landscape/Grass_LayerInfo
+
+
 AnimBoneCompressionSettings  [2]
 ------------------------------------------------------------------------------
   /Engine/Animation/DefaultAnimBoneCompressionSettings
@@ -15906,6 +15977,11 @@ TouchInterface  [2]
 ------------------------------------------------------------------------------
   /Engine/MobileResources/HUD/DefaultVirtualJoysticks
   /Engine/MobileResources/HUD/LeftVirtualJoystickOnly
+
+
+FileMediaSource  [1]
+------------------------------------------------------------------------------
+  /Game/Maps/Menu/BP/Shop/Maps/Preview/Datacenter/Movie_Preview_Datacenter
 
 
 BehaviorTree  [1]

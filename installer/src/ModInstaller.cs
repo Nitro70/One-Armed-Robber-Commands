@@ -21,6 +21,11 @@ namespace OARCommandsInstaller
         private static readonly string ModDirRel = Path.Combine("Mods", ModName);
         private static readonly string RecordRel = Path.Combine(ModDirRel, "installed-files.txt");
         private static readonly string BindsRel = Path.Combine(ModDirRel, "binds.txt");
+        // config.lua holds every command's values and code and is meant to be edited.
+        // config.default.lua is the untouched copy; config.old.lua is an edited one an update replaced.
+        private static readonly string ConfigRel = Path.Combine(ModDirRel, "config.lua");
+        private static readonly string ConfigDefaultRel = Path.Combine(ModDirRel, "config.default.lua");
+        private static readonly string ConfigOldRel = Path.Combine(ModDirRel, "config.old.lua");
         private static readonly string[] RuntimeFiles = { "UE4SS.log" };
         private static readonly UTF8Encoding Utf8NoBom = new UTF8Encoding(false);
 
@@ -51,6 +56,13 @@ namespace OARCommandsInstaller
             RefuseWhileRunning();
             var written = new List<string>();
             string payloadModsTxt = null;
+            // Read before anything is overwritten: the config in use, and the default it started from.
+            byte[] userConfig = ReadIfExists(Path.Combine(win64, ConfigRel));
+            byte[] oldDefault = ReadIfExists(Path.Combine(win64, ConfigDefaultRel));
+            byte[] newDefault = null;
+            List<string> oldRecord = File.Exists(Path.Combine(win64, RecordRel))
+                ? File.ReadAllLines(Path.Combine(win64, RecordRel)).Select(l => l.Trim()).Where(l => l.Length > 0).ToList()
+                : new List<string>();
             using (Stream s = typeof(ModInstaller).Assembly.GetManifestResourceStream("payload.zip"))
             {
                 if (s == null) throw new InvalidOperationException("The installer is damaged: its files are missing.");
@@ -66,6 +78,15 @@ namespace OARCommandsInstaller
                                 payloadModsTxt = reader.ReadToEnd();
                             continue;
                         }
+                        if (string.Equals(rel, ConfigRel, StringComparison.OrdinalIgnoreCase))
+                        {
+                            using (var buffer = new MemoryStream())
+                            {
+                                using (Stream src = entry.Open()) src.CopyTo(buffer);
+                                newDefault = buffer.ToArray();
+                            }
+                            continue;
+                        }
                         string target = InsideFolder(win64, rel);
                         Directory.CreateDirectory(Path.GetDirectoryName(target));
                         using (Stream src = entry.Open())
@@ -75,7 +96,12 @@ namespace OARCommandsInstaller
                     }
                 }
             }
+            if (newDefault == null) throw new InvalidOperationException("The installer is damaged: config.lua is missing.");
             log($"Copied {written.Count} files (UE4SS 3.0.1 + {ModName}).");
+            InstallConfig(win64, userConfig, oldDefault, newDefault, written, log);
+            // An edited config saved by an earlier update stays, and stays in the record for uninstall.
+            if (File.Exists(Path.Combine(win64, ConfigOldRel)) && !written.Contains(ConfigOldRel)) written.Add(ConfigOldRel);
+            RemoveStaleFiles(win64, oldRecord, written, log);
             MigrateOldVersion(win64, log);
             MergeModsTxt(win64, payloadModsTxt, log);
             File.WriteAllLines(Path.Combine(win64, RecordRel), written, Utf8NoBom);
@@ -103,7 +129,7 @@ namespace OARCommandsInstaller
             }
             string modDir = Path.Combine(win64, ModDirRel);
             if (Directory.Exists(modDir)) Directory.Delete(modDir, true);   // our own folder: record + binds
-            log($"Removed {removed} files and the {ModName} folder (including saved binds).");
+            log($"Removed {removed} files and the {ModName} folder (including saved binds and config.lua).");
 
             string modsRoot = Path.Combine(win64, "Mods");
             DeleteEmptyFolders(modsRoot);
@@ -123,6 +149,52 @@ namespace OARCommandsInstaller
             }
             log("One-armed robber is back to normal.");
         }
+
+        /// <summary>
+        /// config.lua is the one file people edit. A fresh install writes the default. An update keeps an
+        /// edited config when the default did not change, and otherwise saves it as config.old.lua
+        /// and writes the new default, because the config holds the commands' code and an old one would
+        /// miss whatever the new version added.
+        /// </summary>
+        private static void InstallConfig(string win64, byte[] userConfig, byte[] oldDefault, byte[] newDefault,
+                                          List<string> written, Action<string> log)
+        {
+            string target = InsideFolder(win64, ConfigRel);
+            Directory.CreateDirectory(Path.GetDirectoryName(target));
+            written.Add(ConfigRel);
+            bool edited = userConfig != null && !userConfig.SequenceEqual(oldDefault ?? newDefault);
+            if (!edited)
+            {
+                File.WriteAllBytes(target, newDefault);
+                log(userConfig == null ? "Installed the default config.lua." : "config.lua was not edited; it is the current default.");
+                return;
+            }
+            if (oldDefault != null && oldDefault.SequenceEqual(newDefault))
+            {
+                log("Your edited config.lua was kept (the default config did not change in this version).");
+                return;
+            }
+            File.WriteAllBytes(InsideFolder(win64, ConfigOldRel), userConfig);
+            written.Add(ConfigOldRel);
+            File.WriteAllBytes(target, newDefault);
+            log("This version has a new default config.lua. Your edited one was saved as config.old.lua.");
+        }
+
+        /// <summary>Deletes files an earlier version installed that this version no longer has.</summary>
+        private static void RemoveStaleFiles(string win64, List<string> oldRecord, List<string> written, Action<string> log)
+        {
+            var current = new HashSet<string>(written, StringComparer.OrdinalIgnoreCase);
+            int removed = 0;
+            foreach (string rel in oldRecord)
+            {
+                if (current.Contains(rel)) continue;
+                string target = InsideFolder(win64, rel);
+                if (File.Exists(target)) { File.Delete(target); removed++; }
+            }
+            if (removed > 0) log($"Removed {removed} files from the older version that are no longer used.");
+        }
+
+        private static byte[] ReadIfExists(string path) => File.Exists(path) ? File.ReadAllBytes(path) : null;
 
         private static void RefuseWhileRunning()
         {
