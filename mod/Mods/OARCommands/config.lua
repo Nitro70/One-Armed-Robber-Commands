@@ -21,8 +21,8 @@
       sharing level, whether you are in noclip, and running summon batches. A game restart resets
       everything except the binds.
     - The big name tables are separate files in the Scripts folder and are read again on every
-      reloadconfig too: spawnables.lua (summon), unlockables.lua (maxskills, unlockall) and
-      maps.lua (selectmap, forcemap).
+      reloadconfig too: spawnables.lua and objects.lua (summon), unlockables.lua (maxskills,
+      unlockall) and maps.lua (selectmap, forcemap).
 
     The language is Lua 5.4, running inside UE4SS 3.0.1. What Scripts\main.lua gives this file:
 
@@ -74,6 +74,14 @@ local V = {
     ------------------------------------------------------------------------------------------
     SummonDelayMs = 150,             -- time between two copies of a batch
     SummonMax = 500,                 -- most copies one command spawns
+    -- Where an object with its own data appears: this far in front of where you look from, and
+    -- this much higher (the engine's own summon uses the same two numbers).
+    SummonForward = 72,
+    SummonUp = 15,
+    -- When a copy gets a different mesh than its class normally has, the host marks that mesh
+    -- component as sent over the network, so guests see the new mesh too. Materials are never
+    -- sent by the engine, so guests may see the mesh in its normal colours. false = host only.
+    CopyLookToGuests = true,
 
     ------------------------------------------------------------------------------------------
     -- aiming: dupe, and a guest's destroytarget and teleport when the host runs them
@@ -143,6 +151,7 @@ local V = {
 
 -- The name tables (separate files in the Scripts folder, see the top of this file)
 local Spawnables = Core.Data("spawnables")
+local Objects = Core.Data("objects")
 local Unlockables = Core.Data("unlockables")
 local Maps = Core.Data("maps")
 
@@ -166,6 +175,11 @@ local function Number(text)
     local n = tonumber(text or "")
     if not n or n ~= n or n == math.huge or n == -math.huge then return nil end
     return n
+end
+
+-- A name without capitals, spaces, underscores or other signs: "Gold bar" -> "goldbar"
+local function Squash(text)
+    return (string.lower(text):gsub("[^%w]", ""))
 end
 
 local function Words(line)
@@ -397,47 +411,320 @@ Core.Command("unbindall", function(FullCommand, Parameters, Ar)
 end)
 
 --------------------------------------------------------------------------------------------------
+-- An object's data: what makes one Artwork a statue and another one a painting
+--
+-- Many things in the game are one class with different data on each copy: its meshes and
+-- materials, its size, and its Blueprint variables (its value, a keycard's name...). A plain
+-- summon of the class only ever gives the class's default look. summon with a name from
+-- objects.lua, and dupe, spawn the class and then put that data on the new copy.
+--
+--    data = { props = { { name, value }, ... },          Blueprint variables of the actor
+--             comps = { [component name] = { mesh = <mesh>, skeletal = true or nil,
+--                                            materials = { [slot] = <material> },
+--                                            scale = { X, Y, Z }, props = { { name, value }, ... } } } }
+--
+-- What is copied by dupe: every Blueprint variable that is a number, a yes/no, text, a name, a
+-- reference to an asset or a class, or a struct of plain numbers (vector, rotation, colour); and
+-- for every mesh component its mesh, materials and size. Not copied: references to other objects
+-- in the map, lists, and the engine's own properties (position, owner, network role).
+--------------------------------------------------------------------------------------------------
+local function EngineClass(name)
+    return StaticFindObject("/Script/Engine." .. name)
+end
+
+local function IsKind(object, className)
+    local cls = EngineClass(className)
+    return Valid(cls) and object:IsA(cls)
+end
+
+local function IsBlueprintClass(cls)
+    return Valid(cls) and cls:GetClass():GetFName():ToString() == "BlueprintGeneratedClass"
+end
+
+-- The components of an actor by name: its root and everything its Blueprint added.
+local function ComponentsOf(actor)
+    local out = {}
+    local function add(c)
+        if Valid(c) then out[c:GetFName():ToString()] = c end
+    end
+    pcall(function() add(actor:K2_GetRootComponent()) end)
+    pcall(function()
+        local list = actor.BlueprintCreatedComponents
+        for i = 1, list:GetArrayNum() do add(list[i]) end
+    end)
+    return out
+end
+
+-- A struct made only of numbers as a Lua table (a colour, a vector, a rotation); nil for any other.
+local STRUCT_SHAPES = { { "R", "G", "B", "A" }, { "X", "Y", "Z", "W" }, { "X", "Y", "Z" }, { "Pitch", "Yaw", "Roll" },
+                        { "X", "Y" } }
+local function PlainStruct(value)
+    for _, shape in ipairs(STRUCT_SHAPES) do
+        local t = {}
+        local ok = pcall(function()
+            for _, field in ipairs(shape) do
+                local v = value[field]
+                if type(v) ~= "number" then error("not a number") end
+                t[field] = v
+            end
+        end)
+        if ok then return t end
+    end
+    return nil
+end
+
+local COPIED_AS_IS = { "IntProperty", "Int64Property", "Int8Property", "Int16Property", "UInt16Property",
+                       "UInt32Property", "UInt64Property", "FloatProperty", "DoubleProperty", "BoolProperty",
+                       "ByteProperty", "EnumProperty", "NameProperty" }
+
+local function PropertyIs(prop, typeName)
+    local kind = PropertyTypes[typeName]
+    return kind ~= nil and prop:IsA(kind)
+end
+
+-- One property's name and its value in a form that can be put on another object. Nothing for the
+-- kinds that are left alone (see the top of this section).
+local function CopyableValue(owner, prop)
+    local name = prop:GetFName():ToString()
+    if PropertyIs(prop, "ClassProperty") or PropertyIs(prop, "ObjectProperty") then
+        local value = owner[name]
+        if not Valid(value) or IsKind(value, "Actor") or IsKind(value, "ActorComponent") then return nil end
+        return name, value
+    end
+    if PropertyIs(prop, "StrProperty") then return name, owner[name]:ToString() end
+    if PropertyIs(prop, "StructProperty") then
+        local plain = PlainStruct(owner[name])
+        if plain then return name, plain end
+        return nil
+    end
+    for _, typeName in ipairs(COPIED_AS_IS) do
+        if PropertyIs(prop, typeName) then return name, owner[name] end
+    end
+    return nil
+end
+
+-- Every Blueprint variable of an object that can be copied: { { name, value }, ... }.
+local function CaptureProps(object)
+    local props = {}
+    local cls, depth = object:GetClass(), 0
+    while IsBlueprintClass(cls) and depth < 32 do
+        depth = depth + 1
+        cls:ForEachProperty(function(prop)
+            local ok, name, value = pcall(CopyableValue, object, prop)
+            if ok and name ~= nil and value ~= nil then props[#props + 1] = { name, value } end
+        end)
+        cls = cls:GetSuperStruct()
+    end
+    return props
+end
+
+-- All the data of an actor that is in the map right now (for dupe).
+local function CaptureData(actor)
+    local data = { props = CaptureProps(actor), comps = {} }
+    for name, comp in pairs(ComponentsOf(actor)) do
+        local c = {}
+        if IsBlueprintClass(comp:GetClass()) then c.props = CaptureProps(comp) end
+        local static, skeletal = IsKind(comp, "StaticMeshComponent"), IsKind(comp, "SkeletalMeshComponent")
+        if static or skeletal then
+            local mesh
+            if static then mesh = comp.StaticMesh else mesh = comp.SkeletalMesh end
+            if Valid(mesh) then c.mesh, c.skeletal = mesh, skeletal or nil end
+            c.materials = {}
+            for slot = 0, comp:GetNumMaterials() - 1 do
+                local material = comp:GetMaterial(slot)
+                if Valid(material) then c.materials[slot] = material end
+            end
+            c.scale = PlainStruct(comp.RelativeScale3D)
+        end
+        if c.props or c.mesh or c.materials then data.comps[name] = c end
+    end
+    return data
+end
+
+-- The data of a name from objects.lua, with its meshes and materials loaded. nil for a plain class.
+local function DataOf(entry)
+    if not (entry.props or entry.assets or entry.comps) then return nil end
+    local data = { props = {}, comps = {} }
+    for name, value in pairs(entry.props or {}) do data.props[#data.props + 1] = { name, value } end
+    for name, path in pairs(entry.assets or {}) do
+        local asset = LoadClass(path)
+        if asset then data.props[#data.props + 1] = { name, asset } end
+    end
+    for name, c in pairs(entry.comps or {}) do
+        local out = { skeletal = c.skeletal }
+        if c.mesh then out.mesh = LoadClass(c.mesh) end
+        if c.materials then
+            out.materials = {}
+            for slot, path in pairs(c.materials) do out.materials[slot] = LoadClass(path) end
+        end
+        if c.scale then out.scale = { X = c.scale[1], Y = c.scale[2], Z = c.scale[3] } end
+        data.comps[name] = out
+    end
+    return data
+end
+
+local function SetProps(object, props)
+    for _, p in ipairs(props or {}) do
+        pcall(function() object[p[1]] = p[2] end)
+    end
+end
+
+-- Give a component another mesh. Returns true when the mesh changed.
+local function SetMesh(comp, c)
+    if c.skeletal then
+        comp:SetSkeletalMesh(c.mesh, true)
+        return true
+    end
+    local current = comp.StaticMesh
+    if Valid(current) and current:GetAddress() == c.mesh:GetAddress() then return false end
+    if comp:SetStaticMesh(c.mesh) then return true end
+    -- The engine refuses a component that is set to never move: make it movable for the change.
+    local mobility = comp.Mobility
+    comp:SetMobility(2)                         -- EComponentMobility::Movable
+    comp:SetStaticMesh(c.mesh)
+    comp:SetMobility(mobility)
+    return true
+end
+
+local function ApplyData(actor, data)
+    SetProps(actor, data.props)
+    local comps = ComponentsOf(actor)
+    for name, c in pairs(data.comps or {}) do
+        local comp = comps[name]
+        if comp then
+            local ok, problem = pcall(function()
+                SetProps(comp, c.props)
+                if c.mesh and SetMesh(comp, c) and V.CopyLookToGuests and actor:HasAuthority() then
+                    comp:SetIsReplicated(true)
+                end
+                for slot, material in pairs(c.materials or {}) do
+                    if material then comp:SetMaterial(slot, material) end
+                end
+                if c.scale then comp:SetRelativeScale3D(c.scale) end
+            end)
+            if not ok then Print("could not copy the data of " .. name .. ": " .. tostring(problem)) end
+        end
+    end
+end
+
+-- Spawn one actor of a class where the engine's summon would put it, then give it the data.
+local function SpawnWithData(pc, cls, data)
+    local kml = StaticFindObject("/Script/Engine.Default__KismetMathLibrary")
+    local rot = pc:GetControlRotation()
+    local from = pc:GetFocalLocation()
+    local forward = kml:GetForwardVector(rot)
+    local location = { X = from.X + forward.X * V.SummonForward, Y = from.Y + forward.Y * V.SummonForward,
+                       Z = from.Z + forward.Z * V.SummonForward + V.SummonUp }
+    local actor = pc:GetWorld():SpawnActor(cls, location, { Pitch = rot.Pitch, Yaw = rot.Yaw, Roll = rot.Roll })
+    if not Valid(actor) then return nil end
+    ApplyData(actor, data)
+    return actor
+end
+
+--------------------------------------------------------------------------------------------------
 -- summon, spawn, summonstop
 --
 --    summon <thing> [count]    spawn count copies, V.SummonDelayMs apart, e.g.  summon goldbar 10
---                              Names: goldbar, Goldbar_C, a unique start like gold, or a full path.
 --    spawn <thing> [count]     the same
 --    summonstop                cancel summon batches that are still running
+--
+-- Names, compared without capitals, spaces and underscores:
+--    - a class from spawnables.lua:    goldbar, Goldbar_C, statue_museum
+--    - an object from objects.lua:     mona lisa, artwork_nefertiti, vault keycard
+--      (one class with its own mesh, materials, size and values; see the section above)
+--    - an item's in-game name:         artwork, gold bar
+--    - a unique start of any of them:  gold, mona
+--    - a full path:                    /Game/BP/Items/Valuables/Goldbar.Goldbar_C
 --
 -- The thing is loaded first, so it works on any map. As a guest the host summons it, in front of
 -- you (command sharing).
 --------------------------------------------------------------------------------------------------
 State.summonGeneration = State.summonGeneration or 0      -- summonstop raises it; running batches notice
 
+-- Every name summon knows, squashed: { name, entry, show, object }
+local SpawnNames = {}
+for key, entry in pairs(Spawnables) do
+    SpawnNames[#SpawnNames + 1] = { name = Squash(key), entry = entry, show = entry.name }
+end
+for key, entry in pairs(Objects) do
+    SpawnNames[#SpawnNames + 1] = { name = Squash(key), entry = entry, show = key, object = true }
+end
+
+local function IsPlain(entry)
+    return not (entry.props or entry.assets or entry.comps)
+end
+
+-- Several names for the very same thing count once (goldbar and "gold bar"); a class name wins.
+local function DistinctThings(pool)
+    table.sort(pool, function(a, b)
+        if (a.object or false) ~= (b.object or false) then return not a.object end
+        return a.show < b.show
+    end)
+    local out, seen = {}, {}
+    for _, n in ipairs(pool) do
+        local id = IsPlain(n.entry) and ("plain " .. tostring(n.entry.path)) or n.entry
+        if not seen[id] then
+            seen[id] = true
+            out[#out + 1] = n
+        end
+    end
+    return out
+end
+
 local function ResolveSpawnable(text)
     if text:sub(1, 1) == "/" then                                  -- full path given
         return { name = text:match("%.([^%.]+)$") or text, path = text }
     end
-    local key = string.lower(text):gsub("_c$", "")
-    if Spawnables[key] then return Spawnables[key] end
-    local starts, contains = {}, {}
-    for k, v in pairs(Spawnables) do
-        if k:sub(1, #key) == key then starts[#starts + 1] = v
-        elseif k:find(key, 1, true) then contains[#contains + 1] = v end
+    local want = Squash((string.lower(text):gsub("_c$", "")))
+    if want == "" then return { name = text } end
+    -- Best first: the exact name; a class that starts with it; an object that starts with it;
+    -- a class that contains it; an object that contains it.
+    local tiers = { {}, {}, {}, {}, {} }
+    for _, n in ipairs(SpawnNames) do
+        local tier
+        if n.name == want then tier = 1
+        elseif n.name:sub(1, #want) == want then tier = n.object and 3 or 2
+        elseif n.name:find(want, 1, true) then tier = n.object and 5 or 4 end
+        if tier then tiers[tier][#tiers[tier] + 1] = n end
     end
-    local pool = (#starts > 0) and starts or contains
-    if #pool == 1 then return pool[1] end
-    if #pool > 1 then
-        table.sort(pool, function(a, b) return a.name < b.name end)
-        local names = {}
-        for i = 1, math.min(#pool, 8) do names[i] = pool[i].name end
-        return nil, string.format("'%s' matches %d things: %s%s", text, #pool, table.concat(names, ", "),
-            #pool > 8 and ", ..." or "")
+    for _, pool in ipairs(tiers) do
+        if #pool > 0 then
+            pool = DistinctThings(pool)
+            if #pool == 1 then return pool[1].entry end
+            local names = {}
+            for i = 1, math.min(#pool, 8) do names[i] = pool[i].show end
+            return nil, string.format("'%s' matches %d things: %s%s", text, #pool, table.concat(names, ", "),
+                #pool > 8 and ", ..." or "")
+        end
     end
     return { name = text }                     -- not a Blueprint we know: let the engine try (PointLight etc.)
 end
 
--- target: the controller to summon for (a guest's, on the host); default your own.
+-- "mona lisa 3" -> "mona lisa", 3.  The last word is the count when it is a number.
+local function NameAndCount(words)
+    local last, count = #words, 1
+    if last > 1 and tonumber(words[last]) then
+        count = math.floor(tonumber(words[last]))
+        last = last - 1
+    end
+    return table.concat(words, " ", 1, last), math.max(1, math.min(count, V.SummonMax))
+end
+
+-- entry: { name, path, label, and for an object its data (props, assets, comps) }.
+-- dupe passes cls and data itself. target: the controller to summon for (a guest's, on the
+-- host); default your own.
 local function SpawnBatch(entry, count, Ar, target)
     local pc = target or LocalPlayerController()
     if not pc then Say(Ar, "No local player yet") return "no local player" end
     if not CheatManagerFor(pc) then Say(Ar, "No cheat manager, cannot summon") return "no cheat manager" end
     if entry.path then LoadAsset(entry.path) end
+    local cls, data = entry.cls, entry.data
+    if not data then
+        local ok, loaded = pcall(DataOf, entry)
+        if ok then data = loaded else Print("could not load the data of " .. tostring(entry.label) .. ": " .. tostring(loaded)) end
+        if data then cls = LoadClass(entry.path) end
+    end
+    if data and not Valid(cls) then data = nil end
     local generation, done = State.summonGeneration, 0
     local delay = V.SummonDelayMs
     local function step()
@@ -446,7 +733,17 @@ local function SpawnBatch(entry, count, Ar, target)
         if not (p and p:IsValid()) then return end
         local cm = CheatManagerFor(p)
         if not cm then return end
-        cm:Summon(entry.name)
+        local spawned = false
+        if data then
+            local ok, actor = pcall(SpawnWithData, p, cls, data)
+            spawned = ok and actor ~= nil
+            if not ok then Print("spawning with its data failed: " .. tostring(actor)) end
+            if not spawned then
+                Share.Notice("Could not place " .. tostring(entry.label or entry.name) ..
+                    " with its data here, so the plain class was summoned")
+            end
+        end
+        if not spawned then cm:Summon(entry.name) end
         done = done + 1
         if done < count then
             ExecuteWithDelay(delay, function() ExecuteInGameThread(step) end)
@@ -464,10 +761,9 @@ local function DoSummon(pc, words, Ar)
         Say(Ar, "Usage: summon <thing> [count]   e.g.  summon goldbar 10")
         return "usage: summon <thing> [count]"
     end
-    local entry, err = ResolveSpawnable(words[1])
+    local name, count = NameAndCount(words)
+    local entry, err = ResolveSpawnable(name)
     if not entry then Say(Ar, err) return err end
-    local count = math.floor(tonumber(words[2] or "1") or 1)
-    count = math.max(1, math.min(count, V.SummonMax))
     return SpawnBatch(entry, count, Ar, pc)
 end
 
@@ -478,7 +774,7 @@ end
 
 local function SummonHandler(FullCommand, Parameters, Ar)
     if #Parameters > 0 then
-        local entry, err = ResolveSpawnable(Parameters[1])
+        local entry, err = ResolveSpawnable((NameAndCount(Parameters)))
         if not entry then Say(Ar, err) return true end
         -- As a guest the host summons it, in front of you
         if Share.Relay(FullCommand, Ar, function() DoSummon(nil, Parameters, nil) end) then return true end
@@ -499,10 +795,12 @@ end)
 --------------------------------------------------------------------------------------------------
 -- dupe
 --
---    dupe [count]     summon copies of whatever is under your crosshair, e.g.  dupe 5
+--    dupe [count]     copies of whatever is under your crosshair, with its data, e.g.  dupe 5
 --
--- A line trace from the camera (the same call UE4SS's LineTraceMod makes), then a summon of the
--- actor's class by its full path, so two classes with the same short name can't mix up.
+-- A line trace from the camera (the same call UE4SS's LineTraceMod makes) finds the object. Each
+-- copy is spawned from the object's class and then gets the object's data: its Blueprint
+-- variables, and the mesh, materials and size of its components (see "An object's data" above).
+-- So a painting copies as that painting, not as the class's default statue.
 -- As a guest the host copies what you are looking at (your camera position goes along).
 --------------------------------------------------------------------------------------------------
 
@@ -550,7 +848,13 @@ local function DoDupe(pc, words, Ar, pose)
     local path = cls:GetFullName():match("%s(%S+)$") or className   -- "BlueprintGeneratedClass /Game/..X_C"
     local count = math.floor(tonumber(words[1] or "1") or 1)
     count = math.max(1, math.min(count, V.SummonMax))
-    return SpawnBatch({ name = path, label = className }, count, Ar, pc)
+    -- Its data is read once, now; the copies get it even if the original is gone by then.
+    local ok, data = pcall(CaptureData, actor)
+    if not ok then
+        Print("dupe: could not read the object's data, copying the plain class: " .. tostring(data))
+        data = nil
+    end
+    return SpawnBatch({ name = path, label = className, cls = cls, data = data }, count, Ar, pc)
 end
 
 Core.Command("dupe", function(FullCommand, Parameters, Ar)
@@ -993,10 +1297,6 @@ end)
 -- by the same test the map screen uses (in your Steam inventory, or in your unlocked maps).
 -- Level requirements are not checked.
 --------------------------------------------------------------------------------------------------
-local function Squash(text)
-    return (string.lower(text):gsub("[^%w]", ""))
-end
-
 -- Heists first (by short name, title or map file), then the other map files.
 -- Returns { heist = entry } or { file = name }, or nil and a message.
 local function ResolveMap(text)

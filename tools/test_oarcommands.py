@@ -18,7 +18,7 @@ def write_config(tmp, text, name="config.lua"):
 def make_runtime(tmp, config_text=None):
     scripts = os.path.join(tmp, "OARCommands", "Scripts")
     os.makedirs(scripts, exist_ok=True)
-    for f in ("main.lua", "spawnables.lua", "unlockables.lua", "maps.lua"):
+    for f in ("main.lua", "spawnables.lua", "objects.lua", "unlockables.lua", "maps.lua"):
         shutil.copy(os.path.join(SCRIPTS, f), os.path.join(scripts, f))
     if config_text is None:
         config_text = open(os.path.join(MOD, "config.lua"), encoding="utf-8").read()
@@ -91,6 +91,9 @@ def make_runtime(tmp, config_text=None):
         function PC:ClientMessage(text) Messages[#Messages + 1] = text; if Hooks["/Script/Engine.PlayerController:ClientMessage"] then Hooks["/Script/Engine.PlayerController:ClientMessage"](Param(PC), Param(FStr(text))) end end
         function PC:WasInputKeyJustPressed(k) return false end
         function PC:EnableCheats() end
+        function PC:GetWorld() return World end
+        function PC:GetControlRotation() return { Pitch = 0, Yaw = 90, Roll = 0 } end
+        function PC:GetFocalLocation() return { X = 100, Y = 0, Z = 50 } end
         -- the lobby: its manager, the host's menu and one lobby character per player
         Lobby, GI, Menu, MenuPlayers = nil, nil, nil, {}
         function NewLobby(players)
@@ -178,8 +181,16 @@ def make_runtime(tmp, config_text=None):
                 if Loaded[path] then return FakeClass(path) end
                 return Invalid
             end
+            local engine = path:match("^/Script/Engine%.(%a+)$")
+            if engine and EngineKinds[engine] then return EngineKinds[engine] end
             return KSL
         end
+        -- engine classes the mod asks for by path; an object says which of them it is with Kinds
+        EngineKinds = {}
+        for _, name in ipairs({ "Actor", "ActorComponent", "StaticMeshComponent", "SkeletalMeshComponent" }) do
+            EngineKinds[name] = { EngineName = name, IsValid = function() return true end }
+        end
+        PropertyTypes = setmetatable({}, { __index = function(t, k) return k end })
         -- UE4SS 3.0.1 TArray, including its off-by-one (LuaTArray.cpp prepare_to_handle): indexing
         -- only grows the array when the 0-based index is ABOVE Num (or the array is empty), by
         -- index - Num elements (1 when empty), and then touches that index anyway. So only
@@ -235,6 +246,113 @@ def make_runtime(tmp, config_text=None):
         end
         local function Named(s) return { ToString = function() return s end } end
         function ClassNamed(s) return { GetFName = function() return Named(s) end } end
+
+        -- Objects with data: assets, components, Blueprint classes with properties, and the world
+        -- that spawns actors (UE4SS: World:SpawnActor(class, location table, rotation table)).
+        local nextAsset = 5000
+        function FakeAsset(name)
+            nextAsset = nextAsset + 8
+            local addr = nextAsset
+            return { Name = name, IsValid = function() return true end, GetAddress = function() return addr end,
+                     IsA = function() return false end }
+        end
+        NativeClass = { IsValid = function() return true end,
+                        GetClass = function() return { GetFName = function() return Named("Class") end } end,
+                        GetFName = function() return Named("StaticMeshComponent") end }
+        function NewMeshComponent(name, mesh, materials, mobility)
+            local c = { StaticMesh = mesh or Invalid, Materials = materials or {}, Mobility = mobility or 2,
+                        RelativeScale3D = { X = 1, Y = 1, Z = 1 }, Replicated = false, MobilityChanges = 0,
+                        Kinds = { StaticMeshComponent = true, ActorComponent = true } }
+            function c:IsValid() return true end
+            function c:GetFName() return Named(name) end
+            function c:GetClass() return NativeClass end
+            function c:IsA(cls) return self.Kinds[cls.EngineName] == true end
+            function c:GetNumMaterials() return #self.Materials end              -- slot 0 is Materials[1]
+            function c:GetMaterial(slot) return self.Materials[slot + 1] or Invalid end
+            function c:SetMaterial(slot, m) self.Materials[slot + 1] = m end
+            function c:SetStaticMesh(mesh)
+                if self.Mobility == 0 then return false end                      -- the engine refuses a static component
+                self.StaticMesh = mesh
+                return true
+            end
+            function c:SetMobility(m) self.Mobility = m; self.MobilityChanges = self.MobilityChanges + 1 end
+            function c:SetRelativeScale3D(v) self.RelativeScale3D = { X = v.X, Y = v.Y, Z = v.Z } end
+            function c:SetIsReplicated(on) self.Replicated = on end
+            return c
+        end
+        -- props: { { name, type }, ... }; components: function returning the Blueprint's own components
+        function NewBlueprintClass(name, path, parent, props, components)
+            nextAsset = nextAsset + 8
+            local addr = nextAsset
+            local cls = { Path = path, Components = components }
+            function cls:IsValid() return true end
+            function cls:GetAddress() return addr end
+            function cls:GetFName() return Named(name) end
+            function cls:GetFullName() return "BlueprintGeneratedClass " .. path end
+            function cls:GetClass() return { GetFName = function() return Named("BlueprintGeneratedClass") end } end
+            function cls:GetSuperStruct() return parent or NativeClass end
+            function cls:ForEachProperty(fn)
+                for _, prop in ipairs(props or {}) do
+                    fn({ GetFName = function() return Named(prop[1]) end,
+                         IsA = function(_, kind) return kind == prop[2] end })
+                end
+            end
+            return cls
+        end
+        function NewItemActor(cls, fields)
+            local a = { Root = NewMeshComponent("StaticMeshComponent0", FakeAsset("DefaultMesh"), { FakeAsset("DefaultMaterial") },
+                                                StaticRoots and 0 or 2),
+                        BlueprintCreatedComponents = MakeArray(cls.Components and cls.Components() or {}),
+                        Kinds = { Actor = true }, Authority = true }
+            for k, v in pairs(fields or {}) do a[k] = v end
+            function a:IsValid() return true end
+            function a:GetClass() return cls end
+            function a:K2_GetRootComponent() return self.Root end
+            function a:HasAuthority() return self.Authority end
+            function a:IsA(c) return self.Kinds[c.EngineName] == true end
+            return a
+        end
+        Spawned, SpawnFails, StaticRoots = {}, false, false
+        World = {}
+        function World:SpawnActor(cls, location, rotation)
+            assert(type(location) == "table" and type(rotation) == "table", "UE4SS wants tables for location and rotation")
+            if SpawnFails then return Invalid end
+            local actor = NewItemActor(cls)
+            Spawned[#Spawned + 1] = { cls = cls, location = location, rotation = rotation, actor = actor }
+            return actor
+        end
+        function NewLook(text)
+            local c = { Name = FStr(text), Kinds = { ActorComponent = true } }
+            function c:IsValid() return true end
+            function c:GetFName() return Named("LookatInfoComponent") end
+            function c:GetClass() return LookClass end
+            function c:IsA(cls) return self.Kinds[cls.EngineName] == true end
+            return c
+        end
+        LookClass = NewBlueprintClass("LookatInfoComponent_C", "/Game/BP/Component/LookatInfoComponent.LookatInfoComponent_C",
+                                      nil, { { "Name", "StrProperty" } })
+        -- A painting as it hangs in the museum: an Artwork (Statue_museum_C) with its own mesh, two
+        -- materials, size, value and look-at text, plus things that must not be copied.
+        function NewPainting()
+            local base = NewBlueprintClass("Money_base_C", "/Game/BP/Items/Valuables/Money_base.Money_base_C", nil,
+                { { "Value", "IntProperty" }, { "EXP", "FloatProperty" }, { "UberGraphFrame", "StructProperty" } })
+            local cls = NewBlueprintClass("Statue_museum_C", "/Game/BP/Items/Valuables/Statue_museum.Statue_museum_C", base,
+                { { "Title", "StrProperty" }, { "Tint", "StructProperty" }, { "LookatInfoComponent", "ObjectProperty" },
+                  { "Sound", "ObjectProperty" }, { "Kind", "ClassProperty" }, { "Holder", "ObjectProperty" },
+                  { "Parts", "ArrayProperty" }, { "Stolen?", "BoolProperty" }, { "Sort", "NameProperty" } },
+                function() return { NewLook("Artwork") } end)
+            local look = NewLook("Mona Lisa")
+            local holder = { Kinds = { Actor = true }, IsValid = function() return true end }
+            function holder:IsA(c) return self.Kinds[c.EngineName] == true end
+            local actor = NewItemActor(cls, { Value = 45000, EXP = 10.5, UberGraphFrame = {}, Title = FStr("Painting"),
+                Tint = { R = 1, G = 0.5, B = 0, A = 1 }, LookatInfoComponent = look, Sound = FakeAsset("Clink"),
+                Kind = FakeAsset("SomeClass"), Holder = holder, Parts = MakeArray({ 1, 2 }), ["Stolen?"] = true,
+                Sort = "Painting" })
+            actor.Root = NewMeshComponent("StaticMeshComponent0", FakeAsset("PaintingMesh"), { FakeAsset("Canvas"), FakeAsset("Frame") })
+            actor.Root.RelativeScale3D = { X = 0.35, Y = 0.35, Z = 0.35 }
+            actor.BlueprintCreatedComponents = MakeArray({ look })
+            return actor
+        end
         GameCalls = {}        -- SaveCash, LoadLevel... in call order
         for _, fn in ipairs({ "SaveCash", "LoadCash", "SaveLevel", "LoadLevel", "SaveInventoryItems" }) do
             PC[fn] = function(self) GameCalls[#GameCalls + 1] = fn end
@@ -316,6 +434,9 @@ def make_runtime(tmp, config_text=None):
         function GuestPC:IsLocalController() return false end
         function GuestPC:GetAddress() return 77 end
         function GuestPC:ClientMessage(text) GuestMessages[#GuestMessages + 1] = text end
+        function GuestPC:GetWorld() return World end
+        function GuestPC:GetControlRotation() return { Pitch = 0, Yaw = 0, Roll = 0 } end
+        function GuestPC:GetFocalLocation() return { X = 900, Y = 900, Z = 0 } end
         function GuestRequest(text)
             Hooks["/Script/Engine.PlayerController:ServerExecRPC"](Param(GuestPC), Param(FStr(text)))
         end
@@ -829,6 +950,101 @@ end)
     write_config(broken_tmp, default)
     lua3.execute('Console("reloadconfig"); Console("summon goldbar 2")')
     ok &= check("and after fixing the file, reloadconfig brings every command back", len(g3.Summons) == 2)
+
+    # --- objects: one class with different data (summon by object name, dupe with data)
+    lua.execute('Authority = true; QueueDelays = false; PC.CheatManager = CM; LookTarget = nil')
+    objects = lua.eval('(require("objects"))')
+    with_data = {k: v for k, v in objects.items() if v.props is not None or v.comps is not None or v.assets is not None}
+    spawn_keys = set(lua.eval('(require("spawnables"))').keys())
+    spawn_paths = {v.path for v in lua.eval('(require("spawnables"))').values()}
+    ok &= check("objects table: over 60 objects, each of a class summon knows, no name used twice",
+                len(with_data) > 60 and all(v.path in spawn_paths for v in objects.values())
+                and not set(objects.keys()) & spawn_keys)
+    ok &= check("objects table: artwork variants, the Mona Lisa, keycards by name, in-game names",
+                {"mona_lisa", "artwork_nefertiti", "vault_keycard", "artwork", "gold_bar"} <= set(objects.keys())
+                and len([k for k in with_data if k.startswith("artwork_")]) >= 15)
+
+    painting_mesh = "/Game/Assets/PolygonCasino/Models/Props/SM_Prop_Wall_Safe_01_Painting_01.SM_Prop_Wall_Safe_01_Painting_01"
+    lua.execute('Spawned = {}; Summons = {}; Log = {}; OutOfBounds = 0; QueueDelays = true; Console("summon mona lisa 2"); RunDelays(); QueueDelays = false')
+    ok &= check("summon mona lisa 2: two Artworks spawned as actors, not through the engine's summon",
+                len(g.Spawned) == 2 and len(g.Summons) == 0
+                and lua.eval('Spawned[1].cls.Path == "/Game/BP/Items/Valuables/Statue_museum.Statue_museum_C"'))
+    ok &= check("each one gets the painting's mesh, material and value",
+                lua.eval(f'Spawned[2].actor.Root.StaticMesh.Path == "{painting_mesh}"')
+                and lua.eval('Spawned[2].actor.Root.Materials[1].Path:find("M_PolygonCasino_Texture_03_A", 1, true) ~= nil')
+                and lua.eval('Spawned[2].actor.Value == 45000'))
+    ok &= check("it appears where the engine's summon would put it: 72 in front, 15 up",
+                lua.eval('Spawned[1].location.X == 172 and Spawned[1].location.Y == 0 and Spawned[1].location.Z == 65 '
+                         'and Spawned[1].rotation.Yaw == 90'))
+    ok &= check("the host sends the changed mesh to guests", lua.eval('Spawned[1].actor.Root.Replicated == true'))
+    ok &= check("the summary names the object", any("Summoning Artwork: Mona Lisa" in m and "x2" in m for m in values(g.Log)))
+    ok &= check("no memory outside a list is touched", g.OutOfBounds == 0)
+    lua.execute('Spawned = {}; Summons = {}; Console("summon artwork")')
+    ok &= check("summon artwork (the in-game name) is the plain class", values(g.Summons) == ["Statue_museum_C"] and len(g.Spawned) == 0)
+    lua.execute('Spawned = {}; Summons = {}; Console("summon gold bar 2")')
+    ok &= check("names ignore spaces and underscores: gold bar is goldbar",
+                values(g.Summons) == ["Goldbar_C"] * 2 and len(g.Spawned) == 0)
+    lua.execute('Spawned = {}; Summons = {}; Console("summon Statue_Museum")')
+    ok &= check("class names still work, with or without underscores", values(g.Summons) == ["Statue_museum_C"])
+    lua.execute('Spawned = {}; Summons = {}; Log = {}; Console("summon artw")')
+    ok &= check("an unclear start lists the matching names",
+                len(g.Summons) == 0 and len(g.Spawned) == 0 and any("matches" in m and "artwork" in m for m in values(g.Log)))
+    lua.execute('Spawned = {}; Summons = {}; Console("summon mona")')
+    ok &= check("a unique start of an object name is enough", len(g.Spawned) == 1 and len(g.Summons) == 0)
+    lua.execute('Spawned = {}; Console("summon vault keycard")')
+    ok &= check("text variables are set too: a keycard by its name",
+                len(g.Spawned) == 1 and lua.eval('Spawned[1].actor["Keycard name"] == "Vault Keycard"'))
+    lua.execute('Spawned = {}; Console("summon artwork_artthing")')
+    ok &= check("size is copied", lua.eval('math.abs(Spawned[1].actor.Root.RelativeScale3D.X - 0.352) < 0.001'))
+    lua.execute('Spawned = {}; Summons = {}; SpawnFails = true; Console("summon mona lisa"); SpawnFails = false')
+    ok &= check("if spawning as an actor fails, the plain class is summoned instead", values(g.Summons) == ["Statue_museum_C"])
+    lua.execute('Spawned = {}; StaticRoots = true; Console("summon mona lisa"); StaticRoots = false')
+    ok &= check("a component that never moves is made movable just for the mesh change",
+                lua.eval(f'Spawned[1].actor.Root.StaticMesh.Path == "{painting_mesh}" and Spawned[1].actor.Root.Mobility == 0 '
+                         'and Spawned[1].actor.Root.MobilityChanges == 2'))
+
+    lua.execute('Spawned = {}; Summons = {}; Log = {}; OutOfBounds = 0; Source = NewPainting(); LookTarget = Source; QueueDelays = true; Console("dupe 2"); RunDelays(); QueueDelays = false')
+    ok &= check("dupe 2 of a painting: two actors of its class, no plain summon",
+                len(g.Spawned) == 2 and len(g.Summons) == 0 and lua.eval("Spawned[1].cls == Source:GetClass()"))
+    ok &= check("dupe copies the mesh, every material and the size",
+                lua.eval("""(function()
+        local r = Spawned[2].actor.Root
+        return r.StaticMesh.Name == "PaintingMesh" and r.Materials[1].Name == "Canvas" and r.Materials[2].Name == "Frame"
+            and r.RelativeScale3D.X == 0.35 and r.Replicated == true
+    end)()"""))
+    ok &= check("dupe copies the Blueprint variables of the class and of its parent classes",
+                lua.eval("""(function()
+        local a = Spawned[2].actor
+        return a.Value == 45000 and a.EXP == 10.5 and a.Title == "Painting" and a["Stolen?"] == true and a.Sort == "Painting"
+            and a.Tint.R == 1 and a.Tint.G == 0.5 and a.Sound.Name == "Clink" and a.Kind.Name == "SomeClass"
+    end)()"""))
+    ok &= check("dupe copies the variables of Blueprint components (the look-at text)",
+                lua.eval('Spawned[2].actor.BlueprintCreatedComponents.Data[1].Name == "Mona Lisa"'))
+    ok &= check("dupe leaves out references to other actors and components, lists and engine data",
+                lua.eval('Spawned[2].actor.Holder == nil and Spawned[2].actor.LookatInfoComponent == nil '
+                         'and Spawned[2].actor.Parts == nil and Spawned[2].actor.UberGraphFrame == nil'))
+    ok &= check("dupe touches no memory outside a list", g.OutOfBounds == 0)
+    ok &= check("dupe still names the class", any("Summoning Statue_museum_C x2" in m for m in values(g.Log)))
+    lua.execute('Spawned = {}; Source.Value = 1; Source.Root.StaticMesh = FakeAsset("Changed"); QueueDelays = true; Console("dupe 2")')
+    lua.execute('Source.Value = 7; RunDelays(); QueueDelays = false')
+    ok &= check("the data is read once, when dupe runs", lua.eval('Spawned[2].actor.Value == 1 and Spawned[2].actor.Root.StaticMesh.Name == "Changed"'))
+    lua.execute('Spawned = {}; Summons = {}; LookTarget = GoldActor; Console("dupe")')
+    ok &= check("an object whose data cannot be read is still copied as its plain class",
+                values(g.Summons) == [gold] and len(g.Spawned) == 0)
+    write_config(tmp, edited(("CopyLookToGuests = true,", "CopyLookToGuests = false,")))
+    lua.execute('Console("reloadconfig"); Spawned = {}; LookTarget = NewPainting(); Console("dupe")')
+    ok &= check("CopyLookToGuests = false keeps the mesh change on the host only",
+                lua.eval('Spawned[1].actor.Root.StaticMesh.Name == "PaintingMesh" and Spawned[1].actor.Root.Replicated == false'))
+    write_config(tmp, default)
+    lua.execute('Console("reloadconfig"); Console("commandsharing 1"); Spawned = {}; GuestMessages = {}; LookTarget = NewPainting()')
+    lua.execute('GuestRequest("oar1 ao1 dupe @1,2,3,0.0,0.0")')
+    ok &= check("a guest's dupe: the host copies the data and spawns it in front of the guest",
+                len(g.Spawned) == 1 and lua.eval('Spawned[1].actor.Value == 45000 and Spawned[1].location.X == 972')
+                and values(g.GuestMessages)[-1].startswith("[OAR host] ao1 ok Summoning Statue_museum_C"))
+    lua.execute('Spawned = {}; GuestRequest("oar1 ao2 summon mona lisa")')
+    ok &= check("a guest's summon of an object name works through the host too",
+                len(g.Spawned) == 1 and lua.eval('Spawned[1].actor.Value == 45000'))
+    lua.execute('Console("commandsharing 0"); LookTarget = nil; Spawned = {}')
 
     # --- restart
     lua2, _ = make_runtime(tmp)

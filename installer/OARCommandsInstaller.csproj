@@ -8,7 +8,7 @@
     <Nullable>disable</Nullable>
     <AssemblyName>OAR-Commands-Installer</AssemblyName>
     <RootNamespace>OARCommandsInstaller</RootNamespace>
-    <Version>1.3.0</Version>
+    <Version>1.4.0</Version>
     <Product>OAR Commands</Product>
     <Company>OAR Commands contributors</Company>
     <Copyright>MIT License, OAR Commands contributors</Copyright>

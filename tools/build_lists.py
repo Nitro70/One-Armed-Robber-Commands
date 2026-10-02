@@ -19,6 +19,7 @@ import re
 from collections import OrderedDict, defaultdict
 
 import oar_exe_commands
+import make_objects
 import oar_pak
 import oar_registry
 from oar_engine_command_info import COVERED_ELSEWHERE, ENGINE_COMMANDS
@@ -141,7 +142,8 @@ QUICK_START = [
     ("teleport", "go to where you are aiming"),
     ("slomo 0.3", "slow motion (slomo 1 = normal)"),
     ("summon goldbar 5", "spawn things (mod; full list: OAR_Spawn_Commands.txt)"),
-    ("dupe", "copy what you are looking at (mod)"),
+    ("summon mona lisa", "an object: one class with its own look and values (mod; OBJECTS in OAR_Spawn_Commands.txt)"),
+    ("dupe", "copy what you are looking at, with its look and values (mod)"),
     ("bind x destroytarget", "put any command on a key (mod; the game's own SetBind is dead)"),
     ("setmoney 5000000", "set your cash and save it (mod; also addmoney, setlevel, setxp)"),
     ("maxskills / unlockall", "every skill at top tier / every cash-bought weapon, mod, tool, armor (mod)"),
@@ -564,7 +566,10 @@ def build_spawn(objs):
     w("  summon <name> [count]     e.g.  summon Goldbar_C   or   summon goldbar 10")
     w("    Works on any map: the mod loads the thing first. You can drop the _C, use a unique")
     w("    start of the name (gold), or a full /Game/... path. count copies spawn 0.15 s apart.")
-    w("  dupe [count]              copy whatever is under your crosshair")
+    w("    Capitals, spaces and underscores do not matter:  summon gold bar  is  summon goldbar.")
+    w("  summon <object> [count]   e.g.  summon mona lisa   or   summon vault keycard")
+    w("    One class with its own look and values; the names are in the OBJECTS section below.")
+    w("  dupe [count]              copy whatever is under your crosshair, with its look and values")
     w("  summonstop                stop a batch that is still spawning")
     w("")
     w("  Without the mod, the game's own summon needs the exact class name (Goldbar_C) and only")
@@ -577,6 +582,30 @@ def build_spawn(objs):
     w("  * Things built for one heist (keypads, containers, elevators) may need that map's")
     w("    other pieces to actually work.")
     w("  * OAR_Full_Object_List.txt shows which maps each thing is placed on.")
+
+    objects, object_maps = make_objects.build(oar_pak.Pak())
+    with_data = [e for e in objects if e[4]]
+    plain_names = [e for e in objects if not e[4]]
+    w("")
+    w("")
+    w(f"OBJECTS: ONE CLASS WITH ITS OWN LOOK AND VALUES  [{len(with_data)}]")
+    w("-" * 78)
+    w("  Many items are one class placed with different data. Every Artwork is a Statue_museum_C;")
+    w("  the mod spawns the class and then gives the copy that object's mesh, materials, size and")
+    w("  values. These are all the different ones placed in the game's maps.")
+    w("")
+    by_class = defaultdict(list)
+    for key, cls, _path, label, _data in with_data:
+        by_class[cls].append((key, label))
+    for cls in sorted(by_class, key=str.lower):
+        w(f"  {cls}")
+        for key, label in sorted(by_class[cls]):
+            where = ", ".join(object_maps.get(key, []))
+            w(f"    summon {key:<44} {label}" + (f"   [{where}]" if where else ""))
+    w("")
+    w(f"  IN-GAME NAMES of plain classes (the text you see when you look at the item)  [{len(plain_names)}]")
+    for key, cls, _path, label, _data in sorted(plain_names):
+        w(f"    summon {key:<44} {cls}")
 
     def section(title, recs):
         if not recs:

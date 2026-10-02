@@ -6,7 +6,10 @@ HOW TO USE (with the OARCommands mod installed)
   summon <name> [count]     e.g.  summon Goldbar_C   or   summon goldbar 10
     Works on any map: the mod loads the thing first. You can drop the _C, use a unique
     start of the name (gold), or a full /Game/... path. count copies spawn 0.15 s apart.
-  dupe [count]              copy whatever is under your crosshair
+    Capitals, spaces and underscores do not matter:  summon gold bar  is  summon goldbar.
+  summon <object> [count]   e.g.  summon mona lisa   or   summon vault keycard
+    One class with its own look and values; the names are in the OBJECTS section below.
+  dupe [count]              copy whatever is under your crosshair, with its look and values
   summonstop                stop a batch that is still spawning
 
   Without the mod, the game's own summon needs the exact class name (Goldbar_C) and only
@@ -19,6 +22,130 @@ RULES
   * Things built for one heist (keypads, containers, elevators) may need that map's
     other pieces to actually work.
   * OAR_Full_Object_List.txt shows which maps each thing is placed on.
+
+
+OBJECTS: ONE CLASS WITH ITS OWN LOOK AND VALUES  [70]
+------------------------------------------------------------------------------
+  Many items are one class placed with different data. Every Artwork is a Statue_museum_C;
+  the mod spawns the class and then gives the copy that object's mesh, materials, size and
+  values. These are all the different ones placed in the game's maps.
+
+  BP_Balloon_C
+    summon bp_balloon_balloon_02                        BP_Balloon_C: balloon_02   [Mansion_Car]
+    summon bp_balloon_balloon_heart_01                  BP_Balloon_C: balloon_heart_01   [Mansion_Car]
+    summon bp_balloon_balloon_no_03                     BP_Balloon_C: balloon_no_03   [Mansion_Car]
+    summon bp_balloon_balloon_no_04                     BP_Balloon_C: balloon_no_04   [Mansion_Car]
+    summon bp_balloon_balloon_shapes_01                 BP_Balloon_C: balloon_shapes_01   [Mansion_Car]
+    summon bp_balloon_balloon_shapes_01_polygoncasino_texture_02_c BP_Balloon_C: balloon_shapes_01_polygoncasino_texture_02_c   [Mansion_Car]
+    summon bp_balloon_balloon_shapes_01_polygoncasino_texture_03_c BP_Balloon_C: balloon_shapes_01_polygoncasino_texture_03_c   [Mansion_Car]
+    summon bp_balloon_polygonoffice_02_c                BP_Balloon_C: polygonoffice_02_c   [Mansion_Car]
+    summon bp_balloon_polygonoffice_03_c                BP_Balloon_C: polygonoffice_03_c   [Mansion_Car]
+    summon bp_balloon_polygonoffice_04_a                BP_Balloon_C: polygonoffice_04_a   [Mansion_Car]
+  BP_replicatedPhysicsItem_C
+    summon bp_replicatedphysicsitem_barrel_01           BP_replicatedPhysicsItem_C: barrel_01   [Map_Harbour]
+    summon bp_replicatedphysicsitem_barrel_02           BP_replicatedPhysicsItem_C: barrel_02   [Map_Harbour]
+    summon bp_replicatedphysicsitem_barrel_03           BP_replicatedPhysicsItem_C: barrel_03   [Map_Harbour]
+    summon bp_replicatedphysicsitem_cardboardbox_06     BP_replicatedPhysicsItem_C: cardboardbox_06   [Map_Harbour]
+    summon bp_replicatedphysicsitem_chair_plastic_01    BP_replicatedPhysicsItem_C: chair_plastic_01   [Map_Harbour]
+    summon bp_replicatedphysicsitem_pallet_01           BP_replicatedPhysicsItem_C: pallet_01   [Map_Harbour]
+    summon bp_replicatedphysicsitem_radio_01            BP_replicatedPhysicsItem_C: radio_01   [Map_Harbour]
+  DraggableItem_base_C
+    summon draggableitem_base_janitor_cart_01_drag      DraggableItem_base_C: janitor_cart_01_drag   [CIA_Base, Small_Bank]
+  Item_Keycard_C
+    summon basement_keycard                             Keycard: Basement Keycard   [Bar_drugs]
+    summon basement_keycard_2                           Keycard: Basement keycard   [Mansion_Car]
+    summon east_wing_keycard                            Keycard: EAST WING KEYCARD   [Map_AIDataCenter]
+    summon garage_keycard                               Keycard: Garage keycard   [Map_Harbour]
+    summon gate_keycard                                 Keycard: Gate keycard   [Map_Harbour]
+    summon laboratory_keycard                           Keycard: Laboratory keycard   [Map_Sciencelab]
+    summon laser_keycard                                Keycard: Laser keycard   [Casino]
+    summon ram_storage_keycard                          Keycard: RAM STORAGE KEYCARD   [Map_AIDataCenter]
+    summon section_c_keycard                            Keycard: SECTION C KEYCARD   [Map_AIDataCenter]
+    summon security_room_keycard                        Keycard: Security room Keycard   [Mansion_Car]
+    summon server_vault_keycard                         Keycard: SERVER VAULT KEYCARD   [Map_AIDataCenter]
+    summon utility_keycard                              Keycard: Utility Keycard   [CIA_Base, Small_Bank]
+    summon utility_keycard_2                            Keycard: Utility keycard   [Casino]
+    summon utility_keycard_3                            Keycard: Utility keycard   [Knightsbridge_day, Museum_night]
+    summon utility_room_keycard                         Keycard: Utility room keycard   [JewelleryStore]
+    summon vault_keycard                                Keycard: Vault Keycard   [Map_PostalOffice]
+    summon vault_keycard_2                              Keycard: Vault Keycard   [Knightsbridge_day]
+    summon vault_keycard_3                              Keycard: Vault Keycard   [Bar_drugs, CIA_Base, Small_Bank]
+    summon vault_keycard_4                              Keycard: Vault keycard   [Casino, JewelleryStore, Tutorial_Stealth]
+    summon warehouse_keycard                            Keycard: Warehouse Keycard   [Map_PostalOffice]
+    summon warehouse_keycard_2                          Keycard: Warehouse keycard   [Map_Harbour]
+    summon wine_cellar_keycard                          Keycard: Wine cellar keycard   [Map_WineStore]
+  Money_base_C
+    summon cash_money_folded_01                         Cash: money_folded_01   [Mansion_Car]
+    summon cash_money_note_03                           Cash: money_note_03   [BankCutInHalf, Knightsbridge_day, Small_Bank, Tutorial_Loud, Tutorial_Stealth]
+    summon cash_money_roll_clean_01                     Cash: money_roll_clean_01   [Bar_drugs]
+  PushableItem_C
+    summon pushableitem_desklight_01                    PushableItem_C: desklight_01   [Bank]
+    summon pushableitem_lampstanding_02                 PushableItem_C: lampstanding_02   [Bank]
+    summon pushableitem_officedividerwall               PushableItem_C: officedividerwall   [Bank]
+    summon pushableitem_plant_01                        PushableItem_C: plant_01   [Bank]
+    summon pushableitem_ropebarrier_pole_01             PushableItem_C: ropebarrier_pole_01   [Bank]
+    summon pushableitem_seat_01                         PushableItem_C: seat_01   [Bank, HighRise]
+    summon pushableitem_watercooler_01                  PushableItem_C: watercooler_01   [Bank]
+    summon pushableitem_watercooler_tank_01             PushableItem_C: watercooler_tank_01   [Bank]
+  Statue_museum_C
+    summon artwork_artthing                             Artwork: artthing   [CIA_Base, Museum_night]
+    summon artwork_artthing_wall_11                     Artwork: artthing_wall_11   [Mansion_Car]
+    summon artwork_bean                                 Artwork: bean   [Museum_night]
+    summon artwork_circleofdeath                        Artwork: circleofdeath   [CIA_Base, Museum_night]
+    summon artwork_circleofdeath_wall_11                Artwork: circleofdeath_wall_11   [Mansion_Car]
+    summon artwork_driestaanden                         Artwork: driestaanden   [CIA_Base, Museum_night]
+    summon artwork_floppydisk_01                        Artwork: floppydisk_01   [CIA_Base]
+    summon artwork_folder_manila_01_con                 Artwork: folder_manila_01_con   [CIA_Base]
+    summon artwork_hdd_01                               Artwork: hdd_01   [CIA_Base]
+    summon artwork_hdd_usb_02                           Artwork: hdd_usb_02   [CIA_Base]
+    summon artwork_icarus                               Artwork: icarus   [Museum_night]
+    summon artwork_nefertiti                            Artwork: nefertiti   [CIA_Base, Museum_night]
+    summon artwork_statue_01                            Artwork: statue_01   [CIA_Base]
+    summon artwork_twocatstogether                      Artwork: twocatstogether   [Museum_night]
+    summon artwork_wall_11                              Artwork: wall_11   [Mansion_Car]
+    summon artwork_wall_safe_01_painting_01             Artwork: wall_safe_01_painting_01   [Museum_night]
+    summon artwork_woman_nolembs                        Artwork: woman_nolembs   [CIA_Base, Museum_night]
+    summon mona_lisa                                    Artwork: Mona Lisa (the museum's painting)   [Museum_night]
+  Valuable_wine_VinoRossoIncantato_C
+    summon vino_rosso_incantato_black                   Vino Rosso Incantato: black   [Casino]
+
+  IN-GAME NAMES of plain classes (the text you see when you look at the item)  [36]
+    summon advanced_lock_pick                           Lock_pick_Advanced_C
+    summon amarone_rosso_segreto                        Valuable_wine_AmaroneRossoSegreto_C
+    summon artwork                                      Statue_museum_C
+    summon bonds                                        Valuable_Bonds_C
+    summon box_cutter                                   Tool_Boxcutter_C
+    summon bracelets                                    Jewelry_bracelets_C
+    summon c4_explosive                                 C4_C
+    summon camera_blinder                               Tool_Camerahack_C
+    summon chateau_brumeaux_rouge                       Valuable_wine_ChateauMirage_C
+    summon circuit_board                                Valuable_CircuitBoard_C
+    summon concrete_breaker                             ConcreteBreaker_C
+    summon cuvee_eclat                                  Valuable_wine_CuveeEclat_C
+    summon delivery_schedule                            SetupItem_Schedule_C
+    summon diamond_ring                                 DiamondRing_C
+    summon distraction_grenade                          Tool_Grenade_Distraction_C
+    summon emp_grenade                                  Tool_Grenade_EMP_C
+    summon expert_lock_pick                             Lock_pick_Expert_C
+    summon gold_bar                                     Goldbar_C
+    summon gold_watch                                   Jewelry_Watch_C
+    summon green_casino_chips                           Valueable_CasinoChips500_C
+    summon grenade                                      Tool_Grenade_base_C
+    summon guard_phone                                  GuardPhone_C
+    summon hacking_tablet                               HackingDevice_C
+    summon keycard                                      Item_Keycard_C
+    summon note                                         BP_PasswordNote_C
+    summon propane_tank                                 BP_DraggableExplosive_Base_C
+    summon ram_stick                                    Valuable_RAM_C
+    summon red_casino_chips                             Valueable_CasinoChips100_C
+    summon rings                                        Jewelry_Rings_C
+    summon riserva_nebbia                               Valuable_wine_RiservaNebbia_C
+    summon rocket                                       Valuable_Rocket_C
+    summon rocket_launcher                              BP_Valuable_Rocketlauncher_C
+    summon sticky_drill                                 Tool_StickyDrill_C
+    summon training_data                                Valuable_SSD_C
+    summon vino_rosso_incantato                         Valuable_wine_VinoRossoIncantato_C
+    summon yellow_casino_chips                          Valueable_CasinoChips1000_C
 
 
 LOOT AND VALUABLES (pickup items: grab and bag them)  [34]

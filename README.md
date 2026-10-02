@@ -1,7 +1,9 @@
 # OAR Commands
 
 Console commands for **One-armed robber**: a `bind` that actually works, `summon <name> [count]`
-that works on any map, `dupe` for whatever you are looking at, a real `noclip`, `revive`,
+that works on any map and knows every different object (not just `artwork`, but `mona lisa`,
+`artwork nefertiti` or `vault keycard`), `dupe` that copies whatever you are looking at with its
+look and values, a real `noclip`, `revive`,
 commands that set your cash, level and skills and save them, `selectmap` and `forcemap` to pick
 a heist from the console and start it without the ready-up, **command sharing** so friends who
 also have the mod can run commands through your game when you host, and reference lists of every
@@ -66,9 +68,9 @@ Notes:
 | `bind` | List your binds |
 | `bind <key>` | Show what one key does |
 | `unbind <key>` / `unbindall` | Remove one bind / all binds |
-| `summon <name> [count]` | Spawn something, e.g. `summon goldbar 10` |
+| `summon <name> [count]` | Spawn something, e.g. `summon goldbar 10` or `summon mona lisa` |
 | `spawn <name> [count]` | Same as `summon` |
-| `dupe [count]` | Spawn copies of whatever is under your crosshair |
+| `dupe [count]` | Spawn copies of whatever is under your crosshair, with its look and values |
 | `summonstop` | Stop summon batches that are still spawning |
 | `setmoney <amount>` | Set your cash, e.g. `setmoney 5000000` |
 | `addmoney <amount>` | Add cash (a negative amount removes it) |
@@ -100,25 +102,59 @@ Notes:
 
 - Loads the object first, so it works on any map, not just the one it belongs to. The game's
   own `summon` only finds objects that are already loaded and needs the exact class name.
-- Names are forgiving, checked in this order:
-  1. the exact name, with or without `_C`, any capitals: `goldbar`, `Goldbar_C`
-  2. a unique start of a name: `duffel` finds `Duffelbag_C`
-  3. a unique part of a name: `rocketlauncher` finds `BP_Valuable_Rocketlauncher_C`
-  4. a full path: `/Game/BP/Items/Valuables/Goldbar.Goldbar_C`
-  5. if several things match (`summon valuable_wine`), it lists them and spawns nothing
-  6. names it does not know go straight to the engine, so `summon PointLight` still works
-- `count` spawns that many copies 0.15 seconds apart (at most 500 per command).
+- **Three kinds of names**, all in [lists/OAR_Spawn_Commands.txt](lists/OAR_Spawn_Commands.txt):
+  - **A class:** `goldbar`, `Goldbar_C`, `statue_museum`.
+  - **An object:** one class with its own look and values. Every Artwork in the game is the
+    class `Statue_museum_C`; what makes one a painting and another a statue is the mesh,
+    material, size and value it was placed with. Each different one has its own name:
+    `mona lisa`, `artwork nefertiti`, `artwork icarus`, `vault keycard`, `cash money roll`...
+    The mod spawns the class and then puts that data on the copy.
+  - **An item's in-game name** (the text you see when you look at it): `artwork`, `gold bar`,
+    `training data`. That is the plain class with its default look.
+- Names are forgiving. Capitals, spaces and underscores do not matter (`summon gold bar` is
+  `summon goldbar`), and they are checked in this order:
+  1. the exact name: `goldbar`, `Goldbar_C`, `mona lisa`
+  2. a unique start of a class name: `duffel` finds `Duffelbag_C`
+  3. a unique start of an object name: `mona` finds `mona_lisa`
+  4. a unique part of a name: `rocketlauncher` finds `BP_Valuable_Rocketlauncher_C`
+  5. a full path: `/Game/BP/Items/Valuables/Goldbar.Goldbar_C`
+  6. if several things match (`summon artw`), it lists them and spawns nothing
+  7. names it does not know go straight to the engine, so `summon PointLight` still works
+- `count` is the last word when it is a number: `summon mona lisa 3`. It spawns that many copies
+  0.15 seconds apart (at most 500 per command).
 - Everything spawns about 1.5 m in front of you, facing where you look.
-- Every name is in [lists/OAR_Spawn_Commands.txt](lists/OAR_Spawn_Commands.txt).
+- **Which objects there are:** every different look of everything you can pick up (valuables,
+  keycards, tools), plus pushable furniture, loose physics props and balloons, exactly as they
+  are placed in the game's maps. `tools/make_objects.py` reads them out of the map files.
 
 ### dupe
 
-- Traces from your camera to whatever is under the crosshair and summons more of that object's
-  type, by its full path, so objects that share a short name cannot get mixed up.
-- It copies the type, not that exact object: a duplicated gold bar gets a fresh value like any
-  newly spawned one.
+- Traces from your camera to whatever is under the crosshair and spawns copies of it **with its
+  data**, so a painting copies as that painting and not as the class's default statue.
+- What is copied:
+  - every Blueprint variable that is a number, a yes/no, text, a name, a reference to an asset or
+    class, or a struct of plain numbers (vector, rotation, colour): the value, a keycard's name,
+    a wall's mesh choice...;
+  - for every mesh component: its mesh, its materials and its size;
+  - the same variables on the object's Blueprint components (the look-at text, for example).
+- What is not copied: references to other objects in the map, lists, and the engine's own
+  properties (position, owner, network state). The copy appears in front of you.
+- The data is read once, when you type `dupe`. The copies still get it if the original is gone
+  by the time a long batch finishes.
+- Things that build their look from variables when they spawn (walls, doors, buildings) may not
+  rebuild after the variables are copied; their mesh components are copied directly, which
+  covers most of them.
 - Plain level geometry (walls and floors that are just part of the map) is refused rather than
   spawning an empty object.
+
+### Looks in multiplayer
+
+- When you host, a copy with a different mesh shows that mesh for everyone: the host marks the
+  mesh component to be sent over the network (`CopyLookToGuests` in `config.lua`).
+- The engine never sends materials. Guests see the right mesh but possibly in its normal
+  colours.
+- As a guest, `summon` and `dupe` go through the host with
+  [command sharing](#command-sharing) as before, and the host copies the data.
 
 ### Cash, level and skills
 
@@ -277,8 +313,9 @@ restart.
 - **What survives `reloadconfig`:** your binds, the command sharing level, noclip, and running
   summon batches. A game restart resets everything except the binds.
 - **The name tables** are separate files in `Mods\OARCommands\Scripts` and are read again on
-  every `reloadconfig` too: `spawnables.lua` (`summon`), `unlockables.lua` (`maxskills`,
-  `unlockall`) and `maps.lua` (`selectmap`, `forcemap`).
+  every `reloadconfig` too: `spawnables.lua` and `objects.lua` (`summon`), `unlockables.lua`
+  (`maxskills`, `unlockall`) and `maps.lua` (`selectmap`, `forcemap`). You can add your own
+  objects to `objects.lua`: a name, the class, and the meshes, materials, size and values.
 - **`Scripts\main.lua`** is only the loader: it registers each command, key and hook with UE4SS
   once and looks up the current code from `config.lua` every time one runs. UE4SS cannot take a
   registration back, which is why they live there and not in the config.
@@ -397,7 +434,8 @@ Everything goes into `OAR\Binaries\Win64`. The game's own exe and pak files are 
   - `config.lua`, the values and the code of every command (see
     [config.lua](#configlua-change-any-command)), and `config.default.lua`, its untouched copy;
   - `Scripts\main.lua`, the loader;
-  - `Scripts\spawnables.lua`, the name table for `summon`;
+  - `Scripts\spawnables.lua`, the class names for `summon`;
+  - `Scripts\objects.lua`, the object names for `summon` (one class, different data);
   - `Scripts\unlockables.lua`, the skills and cash items for `maxskills` and `unlockall`;
   - `Scripts\maps.lua`, the heists and map files for `selectmap` and `forcemap`;
   - `binds.txt`, your binds, once you make one.
@@ -444,16 +482,20 @@ pip install -r requirements.txt
 python tools/oar_objects.py        # lists/OAR_Full_Object_List.txt and OAR_All_Assets.txt
 python tools/build_lists.py        # lists/OAR_Working_Commands.txt and OAR_Spawn_Commands.txt
 python tools/make_spawnables.py    # mod/Mods/OARCommands/Scripts/spawnables.lua
+python tools/make_objects.py       # mod/Mods/OARCommands/Scripts/objects.lua
 python tools/make_unlockables.py   # mod/Mods/OARCommands/Scripts/unlockables.lua
 python tools/make_maps.py          # mod/Mods/OARCommands/Scripts/maps.lua
 ```
 
-After a game update, run all five again: new heists, loot and items then show up in the lists,
+After a game update, run all six again (`make_objects.py` before `build_lists.py`): new heists, loot and items then show up in the lists,
 in `summon` and in `selectmap`.
 
 - `make_unlockables.py` reads each shop item's and skill's default values (`CashCost`,
   `CoinCost`, `SteamItemDefID`, `SkillComponent`) from the pak and refuses to write a table that
   contains anything with a coin price or a Steam item ID.
+- `make_objects.py` reads every map in the pak and collects, for each item class, the different
+  meshes, materials, sizes and values its placed copies have. Each gets a name from the item's
+  in-game name plus its mesh or text (`artwork_nefertiti`, `vault_keycard`).
 - `make_maps.py` reads the lobby's heist entries (title, map file, coin price, Steam item ID)
   and lists every other map file in the pak. A heist sold for coins is never put in the plain
   map list, so `forcemap` always checks that you own it.

@@ -29,7 +29,8 @@ QUICK START
   teleport                         go to where you are aiming
   slomo 0.3                        slow motion (slomo 1 = normal)
   summon goldbar 5                 spawn things (mod; full list: OAR_Spawn_Commands.txt)
-  dupe                             copy what you are looking at (mod)
+  summon mona lisa                 an object: one class with its own look and values (mod; OBJECTS in OAR_Spawn_Commands.txt)
+  dupe                             copy what you are looking at, with its look and values (mod)
   bind x destroytarget             put any command on a key (mod; the game's own SetBind is dead)
   setmoney 5000000                 set your cash and save it (mod; also addmoney, setlevel, setxp)
   maxskills / unlockall            every skill at top tier / every cash-bought weapon, mod, tool, armor (mod)

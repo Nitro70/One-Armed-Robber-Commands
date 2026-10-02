@@ -19,6 +19,14 @@ FUNC_FLAGS = [(0x00000400, "Native"), (0x00000200, "Exec"), (0x00000800, "Event"
 CPF_PARM, CPF_OUTPARM, CPF_RETURNPARM, CPF_REFERENCEPARM = 0x80, 0x100, 0x400, 0x8000000
 CPF_NET = 0x20
 
+# Structs that are stored as plain numbers instead of tagged properties.
+BINARY_STRUCTS = {"Vector": "<3f", "Rotator": "<3f", "LinearColor": "<4f", "Color": "<4B", "Vector2D": "<2f",
+                  "Quat": "<4f", "Guid": "<4I", "IntPoint": "<2i"}
+
+
+class Ref(str):
+    """A reference to another object, as its full path."""
+
 
 class Reader:
     def __init__(self, data, pos=0):
@@ -204,6 +212,94 @@ class Package:
                 items = [v.i32() for _ in range(v.i32())]
                 out[name] = items if extra == "IntProperty" else [self.obj_name(i) for i in items]
             r.p = start + size
+
+    def read_values(self, r):
+        """Tagged properties -> {name: value}, including nested structs and arrays.
+
+        Object and class references come back as Ref (a str holding the full object path,
+        "/Game/Folder/Asset.Asset", or the dotted path inside this package for its own objects).
+        Vectors, rotators and colours are tuples. A value of a type this does not know is None.
+        """
+        out = {}
+        while True:
+            name = self.fname(r)
+            if name == "None":
+                return out
+            ptype = self.fname(r)
+            size = r.i32()
+            index = r.i32()
+            extra = struct_name = None
+            if ptype == "StructProperty":
+                struct_name = self.fname(r)
+                r.skip(16)
+            elif ptype == "BoolProperty":
+                extra = r.u8()
+            elif ptype in ("ByteProperty", "EnumProperty", "ArrayProperty", "SetProperty"):
+                extra = self.fname(r)
+            elif ptype == "MapProperty":
+                self.fname(r)
+                self.fname(r)
+            if r.u8():
+                r.skip(16)                                 # property guid
+            start = r.p
+            try:
+                if ptype == "BoolProperty":
+                    value = bool(extra)
+                elif ptype == "ArrayProperty":
+                    value = self._read_array(r, extra)
+                else:
+                    value = self._read_value(r, ptype, extra, struct_name)
+            except (ValueError, IndexError, struct.error):
+                value = None
+            r.p = start + size
+            out[name if not index else f"{name}[{index}]"] = value
+
+    def _read_array(self, r, inner):
+        count = r.i32()
+        if inner == "StructProperty":
+            self.fname(r)                                  # the array's own name again
+            self.fname(r)                                  # "StructProperty"
+            r.i64()
+            struct_name = self.fname(r)
+            r.skip(16)
+            if r.u8():
+                r.skip(16)
+            return [self._read_value(r, "StructProperty", None, struct_name) for _ in range(count)]
+        if inner == "BoolProperty":
+            return [bool(r.u8()) for _ in range(count)]
+        if inner == "ByteProperty":
+            data = list(r.d[r.p:r.p + count])
+            r.skip(count)
+            return data
+        return [self._read_value(r, inner, None, None) for _ in range(count)]
+
+    def _read_value(self, r, ptype, extra, struct_name):
+        if ptype == "IntProperty":
+            return r.i32()
+        if ptype == "FloatProperty":
+            value = struct.unpack_from("<f", r.d, r.p)[0]
+            r.skip(4)
+            return value
+        if ptype == "StrProperty":
+            return r.fstring()
+        if ptype in ("NameProperty", "EnumProperty"):
+            return self.fname(r)
+        if ptype in ("ObjectProperty", "ClassProperty"):
+            return Ref(self.full_path(r.i32()))
+        if ptype == "ByteProperty":
+            if extra and extra != "None":
+                return self.fname(r)
+            return r.u8()
+        if ptype == "BoolProperty":
+            return bool(r.u8())
+        if ptype == "StructProperty":
+            layout = BINARY_STRUCTS.get(struct_name)
+            if layout:
+                value = struct.unpack_from(layout, r.d, r.p)
+                r.skip(struct.calcsize(layout))
+                return value
+            return self.read_values(r)
+        raise ValueError(f"unsupported property type {ptype}")
 
     def read_field(self, r):
         """One serialized FProperty; returns dict(type, name, flags, detail) or None for NAME_None."""
