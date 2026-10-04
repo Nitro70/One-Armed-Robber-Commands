@@ -101,6 +101,11 @@ function Core.OwnCommand(name)
     return Builtin[name] or Active.commands[name]
 end
 
+-- Whether the console would hand `name` to the mod right now (a command or an intercept).
+function Core.Handles(name)
+    return (Builtin[name] or Active.commands[name] or Active.intercepts[name]) ~= nil
+end
+
 -- Run fn every time the game calls the function at path ("/Script/Engine.PlayerController:ClientMessage").
 -- Returns true when the hook is in place; false (and the reason) when the function does not exist
 -- yet, for example a Blueprint that is not loaded. Call it again later in that case.

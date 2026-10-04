@@ -101,7 +101,7 @@ def main():
                 code == 0 and shipped == open(default, "rb").read() and b"local V = {" in shipped
                 and "default config.lua" in log)
     ok &= check("the old separate command files are not installed any more",
-                sorted(os.listdir(os.path.join(mod, "Scripts"))) == ["main.lua", "maps.lua", "objects.lua", "spawnables.lua", "unlockables.lua"])
+                sorted(os.listdir(os.path.join(mod, "Scripts"))) == ["gui.lua", "main.lua", "maps.lua", "objects.lua", "spawnables.lua", "unlockables.lua"])
     open(config, "ab").write(b"\n-- my edit\n")
     mine = open(config, "rb").read()
     code, log = run(DEBUG_EXE, root, "install", test_env)

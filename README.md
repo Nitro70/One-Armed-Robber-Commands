@@ -10,7 +10,8 @@ also have the mod can run commands through your game when you host, and referenc
 console command, every spawnable object and every Blueprint class in the game.
 
 Every command's values and full code sit in one file, **`config.lua`**, which you can edit and
-load again in the running game with `reloadconfig`.
+load again in the running game with `reloadconfig`. **`opengui`** opens an in-game menu with all
+of it on tabs, including a searchable list of everything you can spawn.
 
 **Download `OAR-Commands-Installer.exe` from the [Releases](../../releases) page.**
 
@@ -63,6 +64,7 @@ Notes:
 
 | Command | What it does |
 |---|---|
+| `opengui` | Open the in-game menu; again to close it (see [The menu](#the-menu-opengui)). `bind f1 opengui` puts it on F1 |
 | `bind <key> <command>` | Put a command on a key, e.g. `bind x destroytarget` |
 | `bind <key> "<a> \| <b>"` | Several commands on one key, e.g. `bind f1 "god \| ghost"` |
 | `bind` | List your binds |
@@ -76,8 +78,30 @@ Notes:
 | `addmoney <amount>` | Add cash (a negative amount removes it) |
 | `setlevel <level>` | Set your level; XP starts at 0 in that level |
 | `setxp <amount>` | Set your XP within the current level (below what it needs to level up) |
+| `setxp all <amount>` | Host, during a heist: every player gains that much XP on the win screen |
 | `maxskills` | Every skill owned and researched to its top tier |
 | `unlockall` | Every weapon, weapon mod, tool and armor that costs cash |
+| `setammo <amount>` | Every gun you carry gets that much spare ammo, the one in your hand a full magazine |
+| `truckmoney` | Show the money in the getaway truck |
+| `truckmoney set <amount>` / `add <amount>` / `reset` | Host, during a heist: put exactly that much in the truck / add to it / back to 0 |
+| `infiniteammo` | Your magazine refills after every shot; again to turn it off |
+| `reviveall` | Host: revive every downed player |
+| `healall` | Host: everyone back to full health and armor |
+| `godall [on\|off]` | Host: nobody takes damage |
+| `alarm [off\|on\|trigger]` | Show the alarm; host: `off` uses the alarm box, `on` switches it back on, `trigger` makes it go off |
+| `cops [wave\|specials\|clear]` | Show the police; host: send a wave, a special wave, or remove all police |
+| `cameras [off\|destroy]` | Show the security cameras; host: `off` removes them all (guards do not notice), `destroy` breaks them as shooting does |
+| `codes [open]` | Every keypad's code, nearest first; host: `codes open` unlocks them all |
+| `bringloot` | Host: every loose valuable into the getaway truck |
+| `escape` | Host: win the heist now with what is in the truck, nobody has to be in it |
+| `doors` | How many doors are locked and open, and whether the vault is open |
+| `doors unlock` / `doors unlock all` | Host: unlock the door you are looking at / every door; they stay shut |
+| `doors open [all]` / `doors close [all]` | Host: open or close the door you are looking at / every door |
+| `doors vault open` | Host: open the vault. It cannot be closed again (the game has no way to) |
+| `guards` | How many guards are alive, alert and down, and the phones ringing |
+| `guards kill [all]` | Host: kill the guard you are looking at / every guard, as if shot (a phone rings unless they were alert) |
+| `guards remove [all]` | Host: take the guard you are looking at / every guard and body out of the heist (no body, no phone) |
+| `guards phones answer` / `remove` | Host: answer every ringing guard phone as a scanner does (no alarm) / take the phones away |
 | `noclip` | Fly through walls: WASD, Space up, Ctrl down, Shift twice as fast; again to land |
 | `revive` | Get back up with full health |
 | `selectmap [heist]` | Host: pick the heist from the console; with no name, list the heists |
@@ -87,12 +111,88 @@ Notes:
 | `reloadconfig` | Load `config.lua` again after you edited it (see [config.lua](#configlua-change-any-command)) |
 | `reloadconfig default` | Load the untouched copy, `config.default.lua`, without changing your file |
 
+### The menu (opengui)
+
+`opengui` opens a window inside the game (**One-Armed-Menu**); type it again, press your key for
+it, Escape or the X at the top to close it. To put it on a key: `bind f1 opengui`. It works in
+heists and in the lobby.
+
+- **Tabs** on the left, each with only its own commands, in groups: **Player** (noclip, ghost,
+  fly, teleport, revive, god mode, ammo, copy or delete what you look at), **Spawn**, **Heist**
+  (alarm, cameras, keypads, police, guards and their phones, the team, XP for everyone, truck
+  money, loot, escape),
+  **Doors** (the door you look at, every door, the vault), **Progress** (cash, level, XP, skills,
+  gear), **World** (game speed, size, freeze, free camera, FPS), **Lobby** (pick or start a
+  heist), **Binds**, **Settings** and, with Advanced on, **Code**.
+- **Settings**: your own settings, saved in `settings.lua` next to `config.lua` so they stay after
+  a restart (and after an update). Change the boxes, then **Save and apply**; **Default** on a
+  line puts that one back, **Reset everything** all of them.
+  - **Commands**: noclip speed and noclip speed while holding Shift, the time between spawned
+    copies, the most copies one spawn makes, the most spare ammo `setammo` gives, how close to a
+    door or a guard you must aim, the command sharing level every game starts with, and two switches
+    (revives finishing with the bar, guests seeing the look of copies).
+  - **Menu look**: an accent colour (six calm presets), every colour of the window typed as
+    `#rrggbb` with a sample next to it, the title and its font, every text size, the window's
+    normal size, the tab list and line widths, how dark the game gets behind the window, filled or
+    outlined buttons, a filled or barred tab highlight, and animations on or off. The defaults
+    are the look the menu comes with; anyone can make it their own.
+  - Also there: command sharing, putting the window back in the middle, and reloading
+    `config.lua`.
+- Only one menu window is ever open: opening it takes any other one off the screen (one left
+  over from before a `reloadconfig` or from the free camera, for example).
+- **Binds**: type a key and a command and press **Bind it** (or pick one of the ideas), change or
+  remove any of your binds. The same binds as the `bind` command, saved in `binds.txt`.
+- **Code** (only with **Advanced** on): `config.lua` editable in the menu. **Full file** at the
+  top opens all of it; below it, every part (one per command or group of commands) A to Z, with
+  the commands a part makes named next to its title (the search box finds a part by a command in
+  it too). Nothing is left out: a part is the lines between two of the file's title comments, so a
+  command can also use values at the top of the file and helpers in "Things several commands
+  use". **Find** finds any text (any case) in the open part or the full file, also in your
+  unsaved edits: it marks the line, scrolls to it and says "2 of 5, line 340"; **Next** and
+  **Previous** go round the places. **Check** looks for mistakes, **Save and reload** writes
+  `config.lua` and loads it at once, **Undo changes** goes back to the file. An edit with a typo is
+  not saved, and one that fails when it runs is taken back out again, so `config.lua` stays
+  working. Before the first save of a game session your file is copied to `config.backup.lua`.
+  Values saved in **Settings** win over the same values in the file.
+- **Spawn** lists everything `summon` knows, in groups that open and close with a click
+  (Valuables, Tools and items, Guns, Gun attachments, Armor and explosives, Police and people,
+  Heist gear, Props). Click a name to spawn it in front of you; **How many** sets the count.
+  Each name shows its class name on the right.
+- **Search all items** at the top of the Spawn tab searches every group, also the advanced ones,
+  as you type: every word you type must be somewhere in a name, its class name, its path or its
+  group, in any order (`bar gold` finds Gold bar, `valuables goldbar_c` too).
+- **Search** in the title bar does the same for the tab you are on (also in closed groups).
+- **Move it** by dragging the title bar, and **resize it** with the grip in the bottom right
+  corner. It stays where you put it, at that size, until the game closes (it is not saved to a
+  file); Settings > **Back to normal** puts it back in the middle.
+- **Advanced** shows the rarely used spawn groups (player gear, building pieces, menu scenery),
+  the other map files, and the console line each button runs. **Full names** shows class and
+  object names (what you would type) instead of readable names.
+- Lines with an amount box use what you type there (`setammo 999`, `truckmoney set 1000000`...).
+  Buttons that cannot be undone (open the vault, set off the alarm, escape, start a heist) ask
+  first: click them twice.
+- Results show at the bottom of the window, including the host's answers when you are a guest.
+- Every button runs the same command as the console, so it behaves exactly as typing it: as a
+  guest, host commands go to the host through command sharing.
+- While the menu is open the game gets no keys or mouse (they go to the menu), so you do not walk
+  or shoot while clicking. Other binds do nothing then; only your `opengui` key works, to close it.
+- The game clears the screen when a map loads, when you die and on the win screen; the menu then
+  closes by itself and gives the game its keys back.
+- It fades in and out, the window slides into place, a new tab's lines fade in, and the list
+  scrolls smoothly. These only run for a fraction of a second, so they cost nothing while you
+  play (`animate = false` in `Menu = {}` turns them off).
+- What the menu shows is in the `opengui` section at the end of `config.lua` (`MenuTabs`), and
+  its colours and sizes in `Menu = {}` at the top (any value of `Kit.DefaultStyle` in
+  `Scripts\gui.lua`, which builds the window).
+
 ### bind
 
 - Binds are saved in `OAR\Binaries\Win64\Mods\OARCommands\binds.txt` and come back every time you
   start the game.
 - A bind only fires when the key actually reaches the game, so typing in the console or a chat
   box does not trigger it.
+- The usual keys (letters, digits, F1 to F24, the numpad, arrows, mouse 3 to 5...) are watched from
+  the start, so a new bind made in the middle of a game is only a change of its command.
 - Keys: letters, `f1` to `f24`, digits `0` to `9`, `numpad0` to `numpad9`, `space`, `enter`,
   `tab`, `esc`, `up` `down` `left` `right`, `mouse4`, `mouse5`, and the rest of UE4SS's key names
   (for example `PAGE_UP`, `OEM_THREE`).
@@ -173,7 +273,8 @@ Notes:
   the way the game adds a skill when its research finishes: the skill goes into the research queue
   as finished and the game's own `ProgressSkills` moves it into your skills. Skills apply when your
   character spawns, so they take effect from the next heist. A skill saved above its top tier does
-  nothing in the game; `maxskills` repairs that too.
+  nothing in the game; `maxskills` repairs that too. Healing Touch brings out a game bug when you
+  revive someone as a guest: see [Reviving a teammate with Healing Touch](#reviving-a-teammate-with-healing-touch).
 - `unlockall` adds every one of the 254 cash-bought items you don't have, each through the game's
   own `AddInventoryItem`, which saves after every item. With many items missing that takes a few
   seconds; the main menu is the best place to run it.
@@ -184,6 +285,16 @@ Notes:
   coins) are never touched. Those live in your Steam Inventory and cost real money.
 - `setxp` only takes amounts below what your level needs to level up. More would make the game
   level you up one level at a time on your next XP gain; use `setlevel` to jump levels.
+- `setxp all <amount>` gives every player in the heist, you included, that much extra XP. Only
+  each player's own game can change their XP, so it uses the one thing the game sends to everyone:
+  the escape van's own XP call. Every player's game adds it to their heist XP, and the win screen
+  pays and saves it when the heist is won, like the heist's own XP. Guests do not need the mod.
+  - Only the host can use it, and only during a heist.
+  - A lost heist pays nothing, as in the game.
+  - At most 100,000 extra XP per player per heist (`SetXPAllMax` in `config.lua`), about 75
+    levels for a new player. The game levels up one level at a time with a function that calls
+    itself, so far more could crash a low-level player's game on the win screen. The win screen
+    also counts each level up for a few seconds.
 - They work from binds too, e.g. `bind f5 addmoney 100000`.
 
 ### Cheat manager
@@ -209,7 +320,9 @@ it cannot bring you to where the free camera is.
 - **Controls:**
   - WASD moves forward, back, left and right, the game's own movement.
   - Space goes up, Ctrl goes down.
-  - Hold Shift to go twice as fast.
+  - Hold Shift to go faster: twice as fast, or the Shift speed you set (menu Settings > Commands,
+    or `NoclipFastSpeed` in `config.lua`). The normal speed is `NoclipSpeed` (0 = your walking
+    speed). Changed speeds apply at once, also while you fly.
   - Let go of everything and you stop dead instead of drifting.
 - **What it does:** collision off, the engine's flying movement, and your walking speed as the
   normal speed. The game has no up or down input of its own, so the mod adds Space and Ctrl every
@@ -233,6 +346,129 @@ it cannot bring you to where the free camera is.
 - If you were not downed it just refills your health.
 - It has to run on the host (the host decides who is downed): it does when you host or play solo,
   and as a guest it goes through [command sharing](#command-sharing).
+
+### setammo
+
+- `setammo 999` gives every gun you carry 999 spare bullets, and the gun in your hand a full
+  magazine. Reloading takes from the spare bullets as usual.
+- Ammo is counted on each player's own game, so it works the same when you host and when you are
+  a guest, and nobody else needs the mod. It only changes your own guns.
+- At most 999,999 per gun (`AmmoMax` in `config.lua`).
+
+### truckmoney
+
+Put money straight into the getaway truck instead of summoning thousands of gold bars.
+
+- `truckmoney` shows the truck's money, how much of it is loot and how much is from `truckmoney`,
+  and the minimum the truck needs before you can leave.
+- `truckmoney set 1000000` makes the truck hold exactly that. Loot you throw in afterwards still
+  adds on top.
+- `truckmoney add 50000` adds to it. A negative amount takes money away, never below 0.
+- `truckmoney reset` puts it back to 0, for when something went wrong.
+- **Every player gets the whole truck** on the win screen, not a share: that is how the game pays.
+- Host only, during a heist. A guest can look with `truckmoney` but not change it.
+- How it works: the truck keeps its take in one number that everyone's game copies from the host.
+  The mod changes that number the way the game does. When the escape button is pressed, the game
+  counts the money again from the loot inside; the mod puts its change back on top right after.
+  Loading a new map forgets the change.
+- At most 100,000,000 (`TruckMoneyMax` in `config.lua`). Cash is a 32-bit number in this game, and
+  a bigger payout could overflow someone's cash.
+- To leave, the game still needs the minimum take and everyone in the truck. If you were already
+  standing in the truck when you used `set`, step out and back in so it checks again.
+- The take counts toward your Steam "cash" stat, the same as real or summoned loot does.
+
+### Heist commands for the host
+
+The game decides these things on the host, so these commands use the game's own functions there,
+and the game sends the result to every player. Guests do not need the mod.
+
+As a guest you can type them too. They go to the host when the host has OAR Commands with
+[command sharing](#command-sharing) at 2 or 3, and the host's answer shows in your console.
+Otherwise they say that only the host can. The "show" forms (`alarm`, `cops`, `cameras`, `codes`,
+`doors`, `guards`, `guards phones`) work on your own game.
+
+- `reviveall`, `healall`: every downed player up again / everyone back to full health, and full
+  armor for those wearing some. The same steps as a teammate's revive.
+- `godall`: the game's own damage immunity for everyone, the one it gives for a few seconds after
+  some events. While it is on, everyone's screen shows the immunity glow. It covers the players in
+  the heist when you type it: type `godall on` again after someone joins or a new heist starts.
+- `alarm off` uses the alarm box for you: in every heist that box is a lever wired to the alarm,
+  and the command runs the same click event, so the lever swings for everyone and the alarm is
+  disabled (guards can no longer raise it). Once the alarm has already gone off, switching it off
+  does not send the police home.
+- `alarm on` switches the alarm back on and makes the box usable again (the lever stays down).
+- `alarm trigger` makes the alarm go off: the heist goes loud.
+- `alarm` on its own says whether it is ON or OFF and whether it has gone off.
+- `cops wave` and `cops specials` make the police spawner send a wave now. `cops clear` removes
+  every police officer in the map, the way the game clears everyone at the escape. While the heist
+  is loud, the spawner keeps sending new waves.
+- `cameras off` removes every security camera, broken ones too, the way `destroytarget` removes
+  a thing: there is no broken camera left for guards to notice. If someone is looking through a
+  camera from the security room, their camera view closes and they are back in their character
+  first.
+- `cameras destroy` breaks the working cameras the way shooting them does (the head drops, they
+  stop spotting). Guards may notice those.
+- `codes` lists every keypad's code with how far away it is. `codes open` unlocks every keypad the
+  way hacking one does.
+- `bringloot` teleports every loose valuable to a stack above the truck's money area, where it
+  lands and counts the game's own way. It leaves alone what a player is holding, what is stuck to
+  a bag, and what is already in the truck. The stack size is set in `config.lua`
+  (`BringLootColumns`, `BringLootRows`, `BringLootSpacing`, `BringLootLayerHeight`).
+- `escape` presses the escape button for you, even when not everyone is in the truck or the
+  minimum take is not there: everyone gets the win screen with what is in the truck.
+
+### doors
+
+- `doors unlock` unlocks the door you are looking at and leaves it shut. Looking at its lock, its
+  frame or the wall right beside it counts too. `doors unlock all` unlocks every door in the map:
+  lock-picked doors, keycard and hacked doors, hand-scanner doors, and doors that lock once the
+  alarm goes off. It uses the door's own unlock, so every player sees it, and unlike picking an
+  alarm lock it sets nothing off. The game has no way to lock a door again.
+- `doors open` and `doors close` (with `all` for every door) swing doors open or shut. The game's
+  own open is a toggle, so the command leaves a door alone that is already where you want it or
+  still swinging. Opening unlocks the door first. No guard is alerted.
+- `doors vault open` opens the vault the way hacking or drilling it does, and the police waves
+  pause for 30 seconds as in the game. **The vault cannot be closed again**: the game has no way
+  to close it, so the command warns you, and `doors vault close` says so. Players who join after
+  it opened see it shut but can walk through, the same as in the game.
+- `door` is the same command as `doors`.
+- As a guest, `doors unlock` (and open, close) sends your camera position along, so the host's
+  mod unlocks the door **you** are looking at.
+
+### guards
+
+- `guards kill` kills the guard you are looking at the game's own way, as if you shot them with
+  all of their health: every player sees them fall, they drop their gun, you get the game's XP for
+  it, and other guards can find the body. A guard who was not alert drops a phone, as any guard
+  you take down does. `guards kill all` does every guard.
+- `guards remove` takes the guard you are looking at out of the heist: no body and no phone. A
+  keycard on their belt drops to the floor first, and a player they were escorting out is let go.
+  Looking at the floor right beside a guard or a body counts too. `guards remove all` takes every
+  guard and every body.
+- A guard's phone rings for 15 seconds (more with the skill) and then alerts every guard ("Guard
+  did not check in"). `guards phones answer` checks every ringing phone in, the same as carrying
+  it to a scanner, without using up a scanner. `guards phones remove` takes the phones away; one a
+  player is holding is answered instead and stays in their hands.
+- `guards` on its own shows how many guards are alive, alert and down, and the phones ringing.
+- As a guest, `guards kill` and `guards remove` send your camera along, so the host's mod acts on
+  the guard **you** are looking at.
+
+### infiniteammo
+
+- Your magazine is full again after every shot, so you never reload. `infiniteammo` again turns
+  it off. Ammo is counted on your own game, so it works as a guest too. Only your own guns.
+
+### Reviving a teammate with Healing Touch
+
+- **A bug in the game:** your revive bar fills in *your* revive time (5 s, or 4, 3.5 or 3 s with
+  the Healing Touch skill, which `maxskills` gives you). The host finishes the revive after the
+  *downed player's* revive time, and only if you still hold the mouse button then. So with
+  Healing Touch the bar is full before the revive is, and letting go at that moment cancels it.
+- **When you host, the mod fixes it:** a revive finishes when the reviver's bar does. It sets the
+  downed player's revive time to the reviver's just while the game starts its revive timer, then
+  puts it back. A revive is never made slower than the game makes it. `ReviveMatchesBar` in
+  `config.lua` turns this off.
+- **As a guest** the host's game decides: keep holding until your teammate stands up.
 
 ### selectmap and forcemap
 
@@ -337,10 +573,17 @@ commandsharing 1
 |---|---|
 | `0` | Nothing (off). This is the setting after every game start. |
 | `1` | Player commands: `summon`, `spawn`, `summonstop`, `dupe`, `revive`, `noclip`, `god`, `ghost`, `fly`, `walk`, `teleport`, `destroytarget` |
-| `2` | Level 1 plus world commands: `destroyall`, `slomo`, `playersonly`, `changesize` |
+| `2` | Level 1 plus world commands: `destroyall`, `slomo`, `playersonly`, `changesize`, `doors`, `reviveall`, `healall`, `godall`, `alarm`, `cops`, `cameras`, `codes`, `bringloot`, `guards` |
 | `3` | Any console command except the block list below (guests use `host <command>` for commands the mod does not know) |
 
 `commandsharing` with no number shows the current level. Only the host's setting counts.
+
+**How a guest sends a command.** The mod's own commands (`summon`, `dupe`, `noclip`, `revive`,
+the heist commands, `doors`...) go to the host by themselves. For the game's own cheats (`god`, `ghost`, `fly`, `walk`,
+`teleport`, `destroytarget`...) type `host god`, `host ghost` and so on. There is a shortcut that
+sends a typed `god` to the host by itself (`ShareEngineCheatShortcuts` in `config.lua`), but it is
+off: it registers 20 more console commands, and UE4SS 3.0.1 only has room for about 45 per mod.
+With more than that the game crashed at random, even at startup.
 
 **Always blocked**, at every level:
 
@@ -351,20 +594,23 @@ commandsharing 1
   `DoubleFreeFinderCrash`, `MallocFrameProfiler`, `purchase`, `debug`.
 - **The mod's commands that stay on each player's own game and save:** `setmoney`, `addmoney`,
   `setlevel`, `setxp`, `maxskills`, `unlockall`, `bind`, `unbind`, `unbindall`,
-  `commandsharing`, `host`, `reloadconfig`.
+  `commandsharing`, `host`, `reloadconfig`, `setammo`, `infiniteammo`.
 
 **What runs where.** A guest's command runs as that guest, on the host's game:
 
 - `summon` and `spawn` put things in front of the **guest**.
 - `god`, `ghost`, `walk`, `revive` and `noclip` act on the **guest's** character.
-- `destroytarget`, `dupe` and `teleport` act on what the **guest** is looking at: the guest's mod
-  sends its exact camera position and angle, and the host's mod aims from there.
+- `destroytarget`, `dupe`, `teleport`, `doors` and `guards` act on what the **guest** is looking at: the
+  guest's mod sends its exact camera position and angle, and the host's mod aims from there.
+- The heist commands (`alarm off`, `cops wave`, `bringloot`...) change the heist for everyone,
+  the same as when the host types them.
   `destroytarget` from a guest leaves other players alone.
 - The host's own commands are unchanged: when you (the host) type `destroytarget`, it destroys
   what **you** are looking at.
 
 The host's console shows every guest command, for example `[OAR] Friend ran: summon goldbar 5`.
-The guest sees the host's answer, for example `[OAR host] ... ok Summoning Goldbar_C x5`.
+The guest sees the host's answer, for example `[OAR host] ... ok Summoning Goldbar_C x5` or
+`[OAR host] ... ok Unlocked the door (it stays shut)`.
 
 **Failsafe.** A command only goes to the host when you are a guest. It runs on your own game
 exactly as it would without this feature when:
