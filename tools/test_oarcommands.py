@@ -18,7 +18,7 @@ def write_config(tmp, text, name="config.lua"):
 def make_runtime(tmp, config_text=None):
     scripts = os.path.join(tmp, "OARCommands", "Scripts")
     os.makedirs(scripts, exist_ok=True)
-    for f in ("main.lua", "spawnables.lua", "objects.lua", "unlockables.lua", "maps.lua", "gui.lua"):
+    for f in ("main.lua", "spawnables.lua", "objects.lua", "unlockables.lua", "maps.lua", "gui.lua", "esp.lua"):
         shutil.copy(os.path.join(SCRIPTS, f), os.path.join(scripts, f))
     if config_text is None:
         config_text = open(os.path.join(MOD, "config.lua"), encoding="utf-8").read()
@@ -50,9 +50,10 @@ def make_runtime(tmp, config_text=None):
         Hooks = {}
         -- Blueprint functions that are not loaded yet (the character's, until a heist loads it)
         MissingHooks = { ["/Game/BP/Player/PlayerCharacter.PlayerCharacter_C:StartRevive"] = true, ["/Game/BP/Player/PlayerCharacter.PlayerCharacter_C:RevivePlayer"] = true }
-        function RegisterHook(name, fn)
+        PostHooks = {}        -- a hook's second callback (after the function), when it has one
+        function RegisterHook(name, fn, post)
             if MissingHooks[name] then error("Tried to register a hook with Lua function 'RegisterHook' but no UFunction with the specified name was found.") end
-            Count("hook", name); Hooks[name] = fn; return 1, 2
+            Count("hook", name); Hooks[name] = fn; PostHooks[name] = post; return 1, 2
         end
         function Param(v) return { get = function() return v end } end          -- a hook parameter
         function FStr(s) return { ToString = function() return s end } end
@@ -512,6 +513,12 @@ def make_runtime(tmp, config_text=None):
             local slot = {}
             function slot:SetSize(v) assert(type(v.Value) == "number" and (v.SizeRule == 0 or v.SizeRule == 1)) end
             function slot:SetPadding(m) assert(m.Left and m.Top and m.Right and m.Bottom); self.Padding = m end
+            -- a CanvasPanel's slot: anchors, then place and size (flat structs only)
+            function slot:SetMinimum(v) assert(type(v.X) == "number" and type(v.Y) == "number"); self.Min = v end
+            function slot:SetMaximum(v) assert(type(v.X) == "number" and type(v.Y) == "number"); self.Max = v end
+            function slot:SetOffsets(m) assert(m.Left and m.Top and m.Right and m.Bottom); self.Offsets = m end
+            function slot:SetAlignment(v) assert(type(v.X) == "number" and type(v.Y) == "number"); self.Align = v end
+            function slot:SetAutoSize(on) assert(type(on) == "boolean"); self.Auto = on end
             function slot:SetVerticalAlignment(a) assert(type(a) == "number") end
             function slot:SetHorizontalAlignment(a) assert(type(a) == "number") end
             return slot
@@ -543,9 +550,16 @@ def make_runtime(tmp, config_text=None):
             function w:SetVisibility(v) self.Visibility = v end
             function w:SetBrushColor(c) assert(c.R and c.G and c.B and c.A); self.Brush = c end
             function w:SetPadding(m) assert(m.Left and m.Bottom) end
-            local function adopt(self, c) self.Children[#self.Children + 1] = c; c.Parent = self; return FakeSlot() end
+            local function adopt(self, c)
+                self.Children[#self.Children + 1] = c; c.Parent = self
+                c.Slot = FakeSlot()
+                return c.Slot
+            end
             w.SetContent, w.AddChild, w.AddChildToHorizontalBox = adopt, adopt, adopt
-            w.AddChildToVerticalBox, w.AddChildToOverlay = adopt, adopt
+            w.AddChildToVerticalBox, w.AddChildToOverlay, w.AddChildToCanvas = adopt, adopt, adopt
+            function w:SetRenderTransformAngle(a) assert(type(a) == "number"); self.Angle = a end
+            function w:SetRenderTransformPivot(v) assert(type(v.X) == "number" and type(v.Y) == "number"); self.Pivot = v end
+            function w:SetContentColorAndOpacity(c) assert(c.R and c.G and c.B and c.A); self.Content = c end
             function w:SetWidthOverride(x) self.Width = x end
             function w:SetHeightOverride(x) self.Height = x end
             function w:ScrollToStart() self.ScrollOffset = 0 end
@@ -573,11 +587,17 @@ def make_runtime(tmp, config_text=None):
         function WLL:GetViewportSize(world) return { X = 1920, Y = 1080 } end
         function WLL:GetViewportScale(world) return 1.0 end
         function WBL:Create(world, cls, pc)
-            assert(cls.Path == "/Game/UI/Cursors/HammerCursor.HammerCursor_C" and pc ~= nil)
-            UMG.created = UMG.created + 1
+            local overlay = cls.Path == "/Game/UI/Cursors/HammerCursor_Pressed.HammerCursor_Pressed_C"   -- the ESP's
+            assert((overlay or cls.Path == "/Game/UI/Cursors/HammerCursor.HammerCursor_C") and pc ~= nil)
             local uw = FakeWidget("UserWidget")
-            UMG.windows = UMG.windows or {}
-            UMG.windows[#UMG.windows + 1] = uw
+            if overlay then
+                UMG.overlays = UMG.overlays or {}
+                UMG.overlays[#UMG.overlays + 1] = uw
+            else
+                UMG.created = UMG.created + 1
+                UMG.windows = UMG.windows or {}
+                UMG.windows[#UMG.windows + 1] = uw
+            end
             uw.WidgetTree = { RootWidget = FakeWidget("CanvasPanel"), IsValid = function() return true end }
             uw.InViewport = false
             function uw:AddToViewport(z) self.InViewport = true end
@@ -1220,20 +1240,61 @@ def main():
     lua.execute("""
         Truck = MakeTruck(4200)
         Overlapping = {}
+        -- the money area as in the real truck: a box 318 wide, 842 long and 364 tall, its bottom on
+        -- the cargo floor and its top at the roof
+        BoxExtent = { X = 159, Y = 421, Z = 182 }
+        BoxForward, BoxRight = { X = 1, Y = 0, Z = 0 }, { X = 0, Y = 1, Z = 0 }
         Truck.MoneyOverlapper = {
             K2_GetComponentLocation = function() return { X = 1000, Y = 2000, Z = 100 } end,
+            GetScaledBoxExtent = function() return BoxExtent end,
+            GetForwardVector = function() return BoxForward end,
+            GetRightVector = function() return BoxRight end,
             IsOverlappingActor = function(self, a) return Overlapping[a:GetAddress()] == true end,
         }
         Moves = {}
-        function Loot(address, value, parent)
+        -- a piece of loot as the game has it: its physics may be off (placed in the map, or come to
+        -- rest), and its pickup component sets it up on the first pick up and let go
+        Taken = {}
+        function Loot(address, value, parent, physicsOn)
             local l = Thing(address, { Value = value })
             function l:GetAttachParentActor() return parent or Invalid end
+            local root = { Physics = physicsOn or false }
+            function root:IsSimulatingPhysics(bone) assert(bone == "None"); return self.Physics end
+            function root:SetMobility(m) assert(m == 2); self.Movable = true end
+            function root:SetSimulatePhysics(on) assert(self.Movable, "movable first"); self.Physics = on end
+            function l:K2_GetRootComponent() return root end
+            l.Root = root
+            l.PickupItemComponent = Thing(address + 0.5)
+            function l.PickupItemComponent:OnPickedUp() Taken[#Taken + 1] = address .. ":picked up" end
+            function l.PickupItemComponent:OnDropped() Taken[#Taken + 1] = address .. ":let go" end
             function l:K2_SetActorLocation(to, sweep, hit, teleport)
                 assert(sweep == false and type(hit) == "table" and teleport == true)
-                Moves[#Moves + 1] = { who = address, at = to }
+                Moves[#Moves + 1] = { who = address, at = to, falls = root.Physics, taken = #Taken }
+                Overlapping[address] = true                -- put inside the money area: counted
                 return true
             end
             return l
+        end
+        -- a move is inside the money area (in the box's own directions, clear of its sides) and no
+        -- higher than 200 over its floor
+        function InBox(at)
+            local dx, dy = at.X - 1000, at.Y - 2000
+            local a = dx * BoxForward.X + dy * BoxForward.Y
+            local b = dx * BoxRight.X + dy * BoxRight.Y
+            return math.abs(a) <= BoxExtent.X - 60 + 0.01 and math.abs(b) <= BoxExtent.Y - 60 + 0.01
+                and at.Z > 100 - 182 and at.Z <= 100 - 182 + 200
+        end
+        function AllInBox() for _, m in ipairs(Moves) do if not InBox(m.at) then return false end end return true end
+        function Heights()
+            local seen, out = {}, {}
+            for _, m in ipairs(Moves) do if not seen[m.at.Z] then seen[m.at.Z] = true; out[#out + 1] = m.at.Z end end
+            table.sort(out)
+            return table.concat(out, ",")
+        end
+        function ManyLoot(n, first)
+            local list = {}
+            for i = 1, n do list[i] = Loot(first + i, 100) end
+            return list
         end
         Bag = Thing(659)
         Objects.Money_base_C = { Loot(650, 1000), Loot(651, 2000), Loot(652, 4000), Loot(653, 8000, Bag), Loot(654, 16000) }
@@ -1242,11 +1303,81 @@ def main():
         Log = {}
     """)
     lua.execute('Console("bringloot")')
-    ok &= check("bringloot moves loose loot over the truck, not what is held, stuck to a bag or already inside",
+    ok &= check("bringloot moves loose loot into the truck, not what is held, stuck to a bag or already inside",
                 lua.eval("#Moves == 2 and Moves[1].who == 650 and Moves[2].who == 654")
-                and any("2 pieces of loot worth 17000" in m for m in values(g.Log)))
-    ok &= check("bringloot stacks the pieces side by side above the money area",
-                lua.eval("Moves[1].at.Z == 140 and Moves[1].at.X ~= Moves[2].at.X and Moves[1].at.Y == Moves[2].at.Y"))
+                and any("Moving 2 pieces of loot worth 17000 into the truck" in m for m in values(g.Log)))
+    ok &= check("bringloot drops a few pieces side by side in the middle of the money area, just above its floor",
+                lua.eval("Moves[1].at.Z == -22 and Moves[2].at.Z == -22 and AllInBox() and Moves[1].at.X == 1000 "
+                         "and Moves[1].at.Y == 2000 and Moves[2].at.X == 1000 and Moves[2].at.Y == 1955"))
+    ok &= check("each piece is picked up and let go the game's way before it moves: its physics on, then its own "
+                "OnPickedUp and OnDropped, so a piece that only moves once picked up falls instead of floating",
+                lua.eval("Moves[1].falls and Moves[2].falls and Taken[1] == '650:picked up' and Taken[2] == '650:let go' "
+                         "and Moves[1].taken == 2 and Taken[3] == '654:picked up' and Moves[2].taken == 4"))
+    lua.execute("""
+        Moves, Overlapping, Taken = {}, {}, {}
+        Thrown = Loot(660, 500, nil, true)                 -- already falling: its physics is left as it is
+        Thrown.Root.SetMobility = function() error("not again") end
+        Objects.Money_base_C = { Thrown }
+        Console("bringloot")
+    """)
+    ok &= check("a piece that already has its physics on keeps it and is still picked up and let go",
+                lua.eval("#Moves == 1 and Moves[1].falls and #Taken == 2"))
+    lua.execute("""
+        Moves, Overlapping = {}, { [650] = true, [654] = true }
+        Objects.Money_base_C = { Loot(650, 1000), Loot(651, 2000), Loot(652, 4000), Loot(653, 8000, Bag), Loot(654, 16000) }
+        Friend.HoldingActor = Objects.Money_base_C[2]
+        Overlapping[652] = true
+    """)
+    lua.execute('Log = {}; Console("bringloot")')
+    ok &= check("bringloot with nothing loose says so", any("No loose loot to move" in m for m in values(g.Log)))
+    lua.execute("""
+        Moves, Overlapping = {}, {}
+        Objects.Money_base_C = ManyLoot(250, 3000)
+        QueueDelays = true; Log = {}
+        Console("bringloot")
+    """)
+    ok &= check("a big pile: the whole floor of the money area is used, one layer first (85 pieces)",
+                lua.eval("#Moves == 85 and Heights() == '-22' and AllInBox()")
+                and any("Moving 250 pieces" in m and "in 3 layers" in m for m in values(g.Log)))
+    lua.execute('RunDelays()')
+    ok &= check("then each further layer drops a little higher once the one below has landed, all inside the truck",
+                lua.eval("#Moves == 250 and Heights() == '-22,13,48' and AllInBox()"))
+    lua.execute("""
+        Moves, Overlapping = {}, {}
+        Objects.Money_base_C = ManyLoot(600, 4000)
+        Log = {}
+        Console("bringloot"); RunDelays()
+    """)
+    ok &= check("never higher than the safe height under the roof: what does not fit stays and is reported",
+                lua.eval("#Moves == 425 and Heights() == '-22,13,48,83,118' and AllInBox()")
+                and any("175 more do not fit at once" in m for m in values(g.Log)))
+    lua.execute("""
+        Moves, Overlapping = {}, {}
+        BoxForward, BoxRight = { X = 0, Y = 1, Z = 0 }, { X = -1, Y = 0, Z = 0 }   -- a truck turned 90 degrees
+        Objects.Money_base_C = ManyLoot(85, 5000)
+        Console("bringloot"); RunDelays()
+        MaxX, MaxY = 0, 0
+        for _, m in ipairs(Moves) do
+            MaxX = math.max(MaxX, math.abs(m.at.X - 1000)); MaxY = math.max(MaxY, math.abs(m.at.Y - 2000))
+        end
+    """)
+    ok &= check("a turned truck: the pieces follow the truck's own length and width",
+                lua.eval("#Moves == 85 and AllInBox() and MaxX == 360 and MaxY == 90"))
+    lua.execute("""
+        BoxForward, BoxRight = { X = 1, Y = 0, Z = 0 }, { X = 0, Y = 1, Z = 0 }
+        Moves, Overlapping = {}, {}
+        Objects.Money_base_C = ManyLoot(250, 6000)
+        Console("bringloot")
+        WorldId = 2                                        -- the heist ended: another map
+        RunDelays()
+        WorldId = 1; QueueDelays = false
+    """)
+    ok &= check("a map change stops the layers still to come", lua.eval("#Moves == 85"))
+    lua.execute("""
+        Moves, Overlapping = {}, {}
+        Objects.Money_base_C = { Loot(650, 1000), Loot(651, 2000), Loot(652, 4000), Loot(653, 8000, Bag), Loot(654, 16000) }
+        Overlapping[652] = true
+    """)
 
     lua.execute("""
         Button = MakeButton()
@@ -1383,6 +1514,72 @@ def main():
                 and "804:toggle" not in values(g.DoorCalls) and "803:toggle" not in values(g.DoorCalls))
     lua.execute('Log = {}; Console("doors close all")')
     ok &= check("doors close all shuts every open door", g.Plain["Open?"] is False and g.Ajar["Open?"] is False)
+    # --- doors lock: the one you look at, or every door
+    lua.execute("""
+        -- a picked padlock door, left open: both padlocks Unlocked?, their tool spots and the
+        -- inside handle gone (picking destroys them), its health used up by the grinder
+        function Padlock2(address)
+            local l = Thing(address, { ["Unlocked?"] = true })
+            l.ToolOwnerComponent = { Health = 0 }
+            l.SpottedHighlightcomponent = { ["CanHighlight?"] = false }
+            l.ToolSpotChild = { ChildActor = Invalid }
+            function l.ToolSpotChild:SetChildActorClass(cls) DoorCalls[#DoorCalls + 1] = address .. ":spot " .. cls.Path end
+            return l
+        end
+        Barred = Door(807, { ["Open?"] = true, Health = 50 }, 5000)
+        Barred.Lock = { ChildActor = Padlock2(808) }
+        Barred.Lock1 = { ChildActor = Padlock2(809) }
+        Barred.UnlockSide = { ChildActor = Invalid }
+        function Barred.UnlockSide:SetChildActorClass(cls) DoorCalls[#DoorCalls + 1] = "807:handle " .. cls.Path end
+        function Barred:GetFullName() return "DoorBP_Locked_C /Game/Maps/Bank.Bank:PersistentLevel.DoorBP_Locked2" end
+        Objects.DoorBP_C = { Plain, Picked, Keycard, Swinging, Ajar, Barred }
+        for _, d in ipairs(Objects.DoorBP_C) do
+            local a = d:GetAddress()
+            if not d.GetFullName then d.GetFullName = function() return "DoorBP_C /Game/Maps/Bank.Bank:PersistentLevel.Door" .. a end end
+        end
+        LookTarget = Barred; DoorCalls = {}; Dirty = {}; Log = {}
+    """)
+    lua.execute('Console("doors lock")')
+    ok &= check("doors lock: the door you look at is locked again and closed, its padlocks pickable again and their tool spots and inside handle made again",
+                g.Barred["Locked?"] is True and g.Barred["Open?"] is False and "807:Locked?" in values(g.Dirty)
+                and "807:name Door (locked)" in values(g.DoorCalls) and "807:toggle" in values(g.DoorCalls)
+                and lua.eval("Barred.Lock.ChildActor['Unlocked?'] == false and Barred.Lock1.ChildActor['Unlocked?'] == false "
+                             "and Barred.Lock.ChildActor.ToolOwnerComponent.Health == 10 "
+                             "and Barred.Lock1.ChildActor.SpottedHighlightcomponent['CanHighlight?'] == true")
+                and "808:Unlocked?" in values(g.Dirty) and "809:Unlocked?" in values(g.Dirty)
+                and "808:spot /Game/BP/Utility/ToolSpot.ToolSpot_C" in values(g.DoorCalls)
+                and "809:spot /Game/BP/Utility/ToolSpot.ToolSpot_C" in values(g.DoorCalls)
+                and "807:handle /Game/BP/Utility/UnlockCollision.UnlockCollision_C" in values(g.DoorCalls)
+                and any("Locked the door and closed it" in m for m in values(g.Log)))
+    lua.execute('Log = {}; DoorCalls = {}; Console("doors lock")')
+    ok &= check("doors lock on a locked door says so and does not toggle it",
+                any("already locked" in m for m in values(g.Log)) and "807:toggle" not in values(g.DoorCalls))
+    lua.execute('Log = {}; Console("doors unlock"); Console("doors open")')
+    ok &= check("a relocked door unlocks and opens again with doors unlock / doors open",
+                g.Barred["Locked?"] is False and g.Barred["Open?"] is True)
+    lua.execute("""
+        Swinging["Opening?"], Swinging["Open?"] = true, false     -- swinging open right now
+        Ajar["Open?"] = true
+        LookTarget = nil; DoorCalls = {}; Dirty = {}; Log = {}; QueueDelays = true; Delays = {}
+        Console("doors lock all")
+    """)
+    ok &= check("doors lock all: every door locked and named locked; open ones closed, a swinging one left to stop first",
+                all(g[n]["Locked?"] is True for n in ("Plain", "Picked", "Keycard", "Swinging", "Ajar", "Barred"))
+                and g.Ajar["Open?"] is False and g.Barred["Open?"] is False and "803:toggle" not in values(g.DoorCalls)
+                and len([c for c in values(g.DoorCalls) if c.endswith(":name Door (locked)")]) == 6
+                and any("Locked 6 doors (3 being closed)" in m and "Guards can still open" in m for m in values(g.Log)))
+    lua.execute('Swinging["Opening?"], Swinging["Open?"] = false, true; RunDelays(); QueueDelays = false')
+    ok &= check("doors lock all: the door that was swinging open is closed once it stops",
+                g.Swinging["Open?"] is False and "803:toggle" in values(g.DoorCalls))
+    lua.execute('Log = {}; Console("doors lock everything")')
+    ok &= check("doors lock with a wrong word shows the usage", any("Usage: doors" in m and "doors lock [all]" in m for m in values(g.Log)))
+    lua.execute("""
+        Swinging["Opening?"] = true; Swinging["Open?"] = false
+        for _, d in ipairs({ Plain, Picked, Keycard, Ajar, Barred }) do d["Locked?"] = false; d["Open?"] = false end
+        Swinging["Locked?"] = false
+        Objects.DoorBP_C = { Plain, Picked, Keycard, Swinging, Ajar }
+        DoorCalls = {}; Log = {}
+    """)
     lua.execute('Log = {}; Console("doors vault close")')
     ok &= check("doors vault close says the game cannot close a vault", any("cannot be closed" in m for m in values(g.Log))
                 and g.TheVault.Opened == 0)
@@ -2017,9 +2214,10 @@ end)
                          "and UMG.focus == Menu().root and PC.bShowMouseCursor == true and Menu().root.bIsFocusable == true")
                 and len(g.Log) == 0)
     ok &= check("the per-frame hook is placed once the menu opens", g.Hooks[tick] is not None)
-    ok &= check("the window has ten tabs; Code only shows with Advanced on",
-                lua.eval("#Menu().tabChips == 10 and Menu().tabs[10].name == 'Code' and Menu().tabs[9].name == 'Settings' "
-                         "and Menu().tabs[8].name == 'Binds' and Menu().tabChips[10].button.Visibility == 1"))
+    ok &= check("the window has eleven tabs (ESP after Doors); Code only shows with Advanced on",
+                lua.eval("#Menu().tabChips == 11 and Menu().tabs[11].name == 'Code' and Menu().tabs[10].name == 'Settings' "
+                         "and Menu().tabs[9].name == 'Binds' and Menu().tabs[5].name == 'ESP' and Menu().tabs[4].name == 'Doors' "
+                         "and Menu().tabChips[11].button.Visibility == 1"))
     ok &= check("buttons are engine buttons in flat colours, lighter under the mouse, and do not take the keyboard",
                 lua.eval("(function() local b = FindChip('X').button; return b.ClassName == 'Button' and b.IsFocusable == false "
                          "and b.WidgetStyle.Normal.ResourceName == 'None' and b.WidgetStyle.Hovered.TintColor.SpecifiedColor.R "
@@ -2231,7 +2429,7 @@ end)
     lua.execute('Objects.NPC_Guard_C = nil; Objects.GuardPhone_C = nil; Tab("Code")')
     lua.execute('ClickChip("Advanced: on")')
     ok &= check("turning Advanced off on the Code tab goes back to the first tab",
-                lua.eval('Menu().tabs[Menu().tab].name == "Player" and Menu().tabChips[10].button.Visibility == 1'))
+                lua.eval('Menu().tabs[Menu().tab].name == "Player" and Menu().tabChips[11].button.Visibility == 1'))
     lua.execute('Tab("Settings"); old = Menu(); ClickChip("Reload it")')
     ok &= check("Settings: Reload it reloads config.lua and opens the menu again on Settings",
                 lua.eval('Menu() ~= old and Menu().open and Menu().tabs[Menu().tab].name == "Settings"')
@@ -2419,6 +2617,463 @@ end)
         for _, w in ipairs(UMG.windows) do if w.InViewport then onScreen = onScreen + 1 end end
     """)
     ok &= check("any other menu window still on the screen is taken off it: only one window", lua.eval("onScreen == 1 and not stray.InViewport"))
+
+    # --- the ESP: guards, police, civilians and players marked through walls
+    lua.execute("""
+        -- engine pieces the ESP uses
+        GS = { IsValid = function() return true end }
+        Sight = {}                                        -- which actors you can see directly (line of sight)
+        function GS:GetPlayerController(ctx, i) assert(i == 0); return PC end
+        WorldTime = 100                                   -- the world's clock (a new map starts it again)
+        function GS:GetRealTimeSeconds(w) return WorldTime end
+        -- engine functions and classes the ESP keeps (permanent /Script objects)
+        GetLocFn = setmetatable({ IsValid = function() return true end }, { __call = function(_, a) return a:K2_GetActorLocation() end })
+        for _, k in ipairs({ "SkeletalMeshComponent", "StaticMeshComponent", "ChildActorComponent" }) do
+            EngineKinds[k] = { EngineName = k, IsValid = function() return true end }
+        end
+        Owners = {}                                       -- who each overlay was made for
+        local create = WBL.Create
+        function WBL:Create(world, cls, pc)
+            local w = create(self, world, cls, pc)
+            if cls.Path:find("Pressed", 1, true) then Owners[#Owners + 1] = pc end
+            return w
+        end
+        function PC:LineOfSightTo(actor, vp, alt) assert(vp.X == 0 and alt == false); return Sight[actor:GetAddress()] == true end
+        KMatL = { IsValid = function() return true end }
+        function KMatL:CreateDynamicMaterialInstance(ctx, parent, name, flags)
+            assert(name == "OARCommands_EspOutline" and flags == 0)
+            Copy = { Params = {}, Parent = parent }
+            function Copy:IsValid() return true end
+            function Copy:GetFullName() return "MaterialInstanceDynamic /Game/Maps/Bank.Bank:PersistentLevel.Highlight.OARCommands_EspOutline" end
+            function Copy:SetVectorParameterValue(n, c) assert(c.R and c.A); self.Params[n] = c end
+            function Copy:SetScalarParameterValue(n, v) assert(type(v) == "number"); self.Params[n] = v end
+            return Copy
+        end
+        local find = StaticFindObject
+        function StaticFindObject(path)
+            if path == "/Script/Engine.Default__GameplayStatics" then return GS end
+            if path == "/Script/Engine.Default__KismetMaterialLibrary" then return KMatL end
+            if path == "/Script/Engine.Actor:K2_GetActorLocation" then return GetLocFn end
+            return find(path)
+        end
+        -- the heist map's outline effect: a PostProcessVolume holding the game's outline material
+        Original = { IsValid = function() return true end,
+                     GetFullName = function() return "MaterialInstanceConstant /Game/Mats/HighlightMat_Inst.HighlightMat_Inst" end }
+        Entry = { Weight = 1.0, Object = Original }
+        Volume = { IsValid = function() return true end, GetAddress = function() return 880 end,
+                   Settings = { WeightedBlendables = { Array = MakeArray({ Entry }) } } }
+        local findAll = FindAllOf
+        function FindAllOf(name)
+            if name == "PostProcessVolume" then return { Volume } end
+            return findAll(name)
+        end
+        -- the camera: at 0,0,0 looking along X, 90 degrees wide; 1920 x 1080
+        PC.PlayerCameraManager.GetCameraLocation = function() return { X = 0, Y = 0, Z = 0 } end
+        PC.PlayerCameraManager.GetCameraRotation = function() return { Pitch = 0, Yaw = 0, Roll = 0 } end
+        PC.PlayerCameraManager.GetFOVAngle = function() return 90 end
+        PC.PlayerCameraManager.ViewTarget = { Target = Pawn }
+        SavedControlRotation = PC.GetControlRotation
+        function PC:GetControlRotation() return { Pitch = 0, Yaw = 0, Roll = 0 } end
+        -- NPCs as the game has them
+        function Npc(address, className, x, fields)
+            local n = fields or {}
+            n.Health = n.Health or 100
+            n.Pos = { X = x, Y = 0, Z = 0 }
+            function n:IsValid() return true end
+            function n:GetAddress() return address end
+            function n:GetClass() return { GetFName = function() return { ToString = function() return className end } end } end
+            function n:K2_GetActorLocation() return self.Pos end
+            n.CapsuleComponent = { GetScaledCapsuleHalfHeight = function() return 88 end }
+            n.Mesh = MeshPart("SkeletalMeshComponent")
+            n.BlueprintCreatedComponents = MakeArray(n.Parts or {})
+            function n:GetWorld() return World end
+            return n
+        end
+        -- a mesh part (or another component) of an actor
+        function MeshPart(kind)
+            local m = { bRenderCustomDepth = false, Kind = kind }
+            function m:IsValid() return true end
+            function m:IsA(cls) return cls.EngineName == self.Kind end
+            function m:SetRenderCustomDepth(on) self.bRenderCustomDepth = on end
+            function m:SetCustomDepthStencilValue(v) self.Stencil = v end
+            return m
+        end
+        NPC_TICK, NPC_DIE = "/Game/BP/NPC/NPCBase.NPCBase_C:ReceiveTick", "/Game/BP/NPC/NPCBase.NPCBase_C:Die"
+        function NpcTick(n) Hooks[NPC_TICK](Param(n)) end
+        function Frame() Hooks["/Game/BP/Player/RobberController.RobberController_C:ReceiveTick"](Param(PC)) end
+        function E() return OARCommands.State.esp end
+        function Open() if not (Menu() and Menu().open) then Console("opengui") end end
+        function Shut() if Menu() and Menu().open then Console("opengui") end end
+        function Expand(key, title) if not Menu().expanded[key] then ClickLine(title) end end
+        -- a line of one group (several groups have lines of the same name)
+        function RowIn(group, label)
+            for _, r in ipairs(Lines()) do if r.line.group == group and r.line.label == label then return r end end
+        end
+        function ChipIn(group, label, text)
+            for _, c in ipairs(RowIn(group, label).chips) do if c.text.TextValue == text then return c end end
+        end
+        -- a group's ESP type: Box, Silhouette or Both
+        function SetType(key, title, kind)
+            Open(); if Menu().tabs[Menu().tab].name ~= "ESP" then Tab("ESP") end
+            Expand(key, title); Click(ChipIn(key, "ESP type", kind).button); Shut()
+        end
+        WasOpen, WasTab = Menu() and Menu().open, Menu() and Menu().tabs[Menu().tab].name
+        -- another player, in the game's list of players
+        Buddy = MakePawn(720)
+        Buddy.Pos = { X = 2000, Y = 0, Z = 0 }
+        function Buddy:K2_GetActorLocation() return self.Pos end
+        Buddy.CapsuleComponent = { GetScaledCapsuleHalfHeight = function() return 88 end }
+        Buddy.Mesh = MeshPart("SkeletalMeshComponent")
+        Buddy.BlueprintCreatedComponents = MakeArray({})
+        BuddyState = { PawnPrivate = Buddy, IsValid = function() return true end, GetAddress = function() return 721 end,
+                       PlayerNamePrivate = FStr("Buddy") }
+        MyState = { PawnPrivate = Pawn, IsValid = function() return true end, GetAddress = function() return 501 end,
+                    PlayerNamePrivate = FStr("Me") }
+        World.GameState = { PlayerArray = MakeArray({ MyState, BuddyState }), PowerMultiplier = 1.0 }
+        World.IsValid = function() return true end
+        Log = {}
+    """)
+    lua.execute('Console("esp")')
+    ok &= check("esp turns the ESP on and saves it in settings.lua",
+                any("ESP on" in m for m in values(g.Log)) and "esp = {" in open(settings_path, encoding="utf-8").read()
+                and "on = true" in open(settings_path, encoding="utf-8").read().split("esp = {")[1])
+    lua.execute("""
+        Frame()                                           -- the first frame: the NPCs' event is hooked
+        E().removedAt = -10                               -- (a second has passed: the overlay can be made)
+        Guard = Npc(9001, "NPC_Guard_C", 1000)
+        Swat = Npc(9002, "NPC_Police_Swat_C", 1500, { Health = 100 })
+        Alert = Npc(9003, "NPC_Guard_C", 1200, { ["Alert?"] = true })
+        Behind = Npc(9004, "NPC_Guard_C", -1000)
+        Far = Npc(9005, "NPC_Guard_C", 50000)
+        for _, n in ipairs({ Guard, Swat, Alert, Behind, Far }) do NpcTick(n) end
+        Frame()
+        Cards = E().overlay.cards
+        function CardOf(text)                             -- in the overlay of now (it is made again now and then)
+            for _, c in ipairs(E().overlay and E().overlay.cards or {}) do if c.shown and c.nameValue == text then return c end end
+        end
+    """)
+    ok &= check("the NPCs' own per-frame event is hooked, and the overlay is a separate see-through widget over the game",
+                lua.eval("Hooks[NPC_TICK] ~= nil and Hooks[NPC_DIE] ~= nil and #UMG.overlays == 1 and UMG.overlays[1].InViewport "
+                         "and UMG.overlays[1].Visibility == 3 and UMG.overlays[1].WidgetTree.RootWidget.ClassName == 'CanvasPanel'"))
+    ok &= check("a guard 10 m ahead gets a box where the engine would draw it, with its name and distance",
+                lua.eval("""(function()
+                    local c = CardOf("Guard")
+                    local o = c.slot.Offsets
+                    local function near(a, b) return math.abs(a - b) < 0.01 end
+                    return near(o.Left, 924.5184) and near(o.Top, 455.52) and near(o.Right, 70.9632) and near(o.Bottom, 168.96)
+                        and c.infoValue == "10 m" and c.vis.edge1 and not c.vis.corner1 and c.vis.hpFill and not c.vis.fill
+                end)()"""))
+    ok &= check("each kind of NPC is named, and a guard that is alert gets the warning colour",
+                lua.eval("CardOf('SWAT') ~= nil and CardOf('Guard (alert)') ~= nil "
+                         "and CardOf('Guard').edges[1].Brush.G > 0.4 and CardOf('Guard (alert)').edges[1].Brush.G < 0.1"))
+    ok &= check("the health bar shows what is left (a SWAT with 100 of the 125 the game gives it at this power)",
+                lua.eval("math.abs(CardOf('SWAT').hpSlot.Min.Y - (1 - 16 / 20)) < 0.001"))
+    ok &= check("other players come from the game's list of players, by name; not you, nothing behind you, nothing out of range",
+                lua.eval("CardOf('Buddy') ~= nil and CardOf('Me') == nil and E().shown == 4"))
+    lua.execute('Log = {}; Open(); Tab("ESP")')
+    ok &= check("the ESP tab: on, with a group per kind of target",
+                lua.eval("FindChip('Turn off') ~= nil and FindLine('Guards') ~= nil and FindLine('Police specials') ~= nil "
+                         "and FindLine('Civilians  (off)') ~= nil and FindLine('Silhouettes through walls') ~= nil"))
+    lua.execute("""
+        Expand("esp guard", "Guards")
+        FindLine("Colour").input:SetText(FText("#00ff00")); Click(FindLine("Colour").chips[1].button)
+        ClickChip("Corners")
+        Click(FindLine("Fill the box").chips[1].button)
+        ClickChip("Bottom")
+        Shut()
+        NpcTick(Guard); NpcTick(Swat); NpcTick(Alert); Frame()
+    """)
+    ok &= check("a group's colour, box style, fill and line change at once and are saved",
+                lua.eval("""(function()
+                    local c = CardOf("Guard")
+                    return c.edges[1].Brush.G == 1 and c.edges[1].Brush.R == 0 and c.vis.corner1 and not c.vis.edge1 and c.vis.fill
+                        and c.fill.Brush.A == 0.2 and c.lineShown and c.lineSlot.Offsets.Left == 960 and c.lineSlot.Offsets.Top == 1079
+                        and math.abs(c.line.Angle - math.deg(math.atan(624.48 - 1080, 960 - 960))) < 0.01
+                end)()""") and 'guardColor = "#00ff00"' in open(settings_path, encoding="utf-8").read())
+    lua.execute("""
+        Open(); Expand("esp guard", "Guards")
+        ClickChip("No box")
+        Click(FindLine("Show them").chips[2].button)
+        Shut()
+        NpcTick(Guard); NpcTick(Swat); Frame()
+    """)
+    ok &= check("a group turned off is not shown", lua.eval("CardOf('Guard') == nil and CardOf('SWAT') ~= nil"))
+    lua.execute("""
+        Open(); Expand("esp guard", "Guards"); Click(FindLine("Show them").chips[1].button); ClickChip("Box")
+        Expand("esp look", "Look"); ClickChip("Hide")
+        Shut()
+        Sight[9001] = true
+        NpcTick(Guard); NpcTick(Swat); Frame()
+    """)
+    ok &= check("targets you can see directly can be hidden (only the ones behind walls are marked)",
+                lua.eval("CardOf('Guard') == nil and CardOf('SWAT') ~= nil"))
+    lua.execute("""
+        Sight = {}
+        Open(); Expand("esp look", "Look"); ClickChip("Show"); Shut()
+        SetType("esp guard", "Guards", "Both")
+        SetType("esp police", "Police", "Silhouette")
+        SetType("esp player", "Other players", "Silhouette")
+        NpcTick(Guard); NpcTick(Swat); Frame()
+    """)
+    ok &= check("silhouettes: a copy of the game's outline material in the ESP's two colours takes the effect's place",
+                lua.eval("Entry.Object == Copy and Copy.Parent == Original and Copy.Params.Color1.R == 1 and Copy.Params.Color1.G < 0.1 "
+                         "and Copy.Params.Color.G > 0.5 and Copy.Params.LineWidth == 2 and Copy.Params.EdgeAngleFalloff == 100"))
+    ok &= check("silhouettes per group: guards and police in the first colour, other players in the second",
+                lua.eval("Guard.Mesh.bRenderCustomDepth and Guard.Mesh.Stencil == 1 and Swat.Mesh.Stencil == 1 "
+                         "and Buddy.Mesh.bRenderCustomDepth and Buddy.Mesh.Stencil == 0"))
+    ok &= check("ESP type: Both keeps the box, Silhouette has none",
+                lua.eval("CardOf('Guard').vis.edge1 and not CardOf('SWAT').vis.edge1 and not CardOf('SWAT').vis.corner1"))
+    lua.execute("""
+        Open(); Expand("esp guard", "Guards"); Click(ChipIn("esp guard", "Silhouette colour", "Second").button); Shut()
+        NpcTick(Guard); NpcTick(Swat); Frame()
+    """)
+    ok &= check("a group's silhouette can take the second colour (at once)", lua.eval("Guard.Mesh.Stencil == 0 and Swat.Mesh.Stencil == 1"))
+    lua.execute("""
+        Open(); Expand("esp guard", "Guards"); Click(ChipIn("esp guard", "Silhouette colour", "First").button); Shut()
+        Open(); Expand("esp glow", "Silhouettes through walls"); Click(ChipIn("esp glow", "Style", "Filled").button); Shut()
+        NpcTick(Guard); Frame()
+    """)
+    ok &= check("Filled: a thick band inside the body (the effect's inner side, made thicker)",
+                lua.eval("Copy.Params.EdgeAngleFalloff == -100 and Copy.Params.LineWidth == 20"))
+    lua.execute("""
+        Open(); Expand("esp glow", "Silhouettes through walls"); Click(ChipIn("esp glow", "Style", "Outline").button); Shut()
+        Objects.NPCBase_C = { Guard, Swat, Alert, Behind, Far }
+        Characters = { Buddy }
+        SetType("esp guard", "Guards", "Box")
+        SetType("esp police", "Police", "Box")
+        SetType("esp player", "Other players", "Box")
+        Frame()
+    """)
+    ok &= check("no silhouettes left: the game's own material is back and every mark the ESP made is taken off",
+                lua.eval("Entry.Object == Original and not Guard.Mesh.bRenderCustomDepth and not Swat.Mesh.bRenderCustomDepth "
+                         "and not Buddy.Mesh.bRenderCustomDepth"))
+    lua.execute("""
+        -- a civilian: its body is its clothes (actors it carries) and its hair (a mesh part)
+        Shirt = MeshPart("SkeletalMeshComponent")
+        ShirtActor = { IsValid = function() return true end, BlueprintCreatedComponents = MakeArray({ Shirt }) }
+        Holder = MeshPart("ChildActorComponent"); Holder.ChildActor = ShirtActor
+        Hair = MeshPart("StaticMeshComponent")
+        Civ = Npc(9010, "Civilian_NPC_C", 1300, { Parts = { Holder, Hair } })
+        Open(); Expand("esp civilian", "Civilians  (off)"); Click(RowIn("esp civilian", "Show them").chips[1].button); Shut()
+        SetType("esp civilian", "Civilians", "Silhouette")
+        SetType("esp player", "Other players", "Silhouette")
+        NpcTick(Civ); Frame()
+    """)
+    ok &= check("silhouettes: every mesh of a target is marked, also the ones of the actors it carries (a civilian's clothes and hair)",
+                lua.eval("Civ.Mesh.bRenderCustomDepth and Shirt.bRenderCustomDepth and Hair.bRenderCustomDepth and Shirt.Stencil == 0 "
+                         "and Holder.bRenderCustomDepth == false"))
+    lua.execute("""
+        Buddy["Downed?"] = true
+        Frame(); Frame(); Frame(); Frame(); Frame(); Frame()       -- its state is read again
+        Objects.NPCBase_C = { Civ }; Characters = { Buddy }
+        SetType("esp civilian", "Civilians", "Box")
+        SetType("esp player", "Other players", "Box")
+        Frame()
+    """)
+    ok &= check("silhouettes off: the clothes are unmarked too, and a downed teammate keeps the game's own outline",
+                lua.eval("not Shirt.bRenderCustomDepth and not Hair.bRenderCustomDepth and Buddy.Mesh.bRenderCustomDepth and Buddy.Mesh.Stencil == 0"))
+    lua.execute("""
+        Buddy["Downed?"] = false
+        Open(); Expand("esp civilian", "Civilians"); Click(RowIn("esp civilian", "Show them").chips[2].button); Shut()
+        Twin = Npc(9011, "NPC_Police_Shield_C", 1001)
+        NpcTick(Guard); NpcTick(Twin); Frame()
+        ShieldCard = CardOf("Shield")
+        Twin.Pos = { X = 999, Y = 0, Z = 0 }               -- now nearer than the guard
+        NpcTick(Guard); NpcTick(Twin); Frame()
+    """)
+    ok &= check("a target keeps its card when targets swap places by distance (nothing to change but places)",
+                lua.eval("CardOf('Shield') == ShieldCard"))
+    lua.execute("""
+        Before = E().overlay.root
+        Open(); Expand("esp look", "Look"); Click(FindLine("Line thickness").chips[2].button); Shut()
+        NpcTick(Guard); Frame()
+    """)
+    ok &= check("a new line thickness: the old overlay is taken off the screen and a new one is made",
+                lua.eval("not Before.InViewport and E().overlay ~= nil and E().overlay.root ~= Before and E().overlay.thickness == 3"))
+    lua.execute("""
+        Open(); Expand("esp look", "Look"); Click(FindLine("Line thickness").chips[4].button); Shut()
+        -- the free camera: the local player drives the camera's controller, yours has no player
+        DCC.PlayerCameraManager = PC.PlayerCameraManager
+        function DCC:GetAddress() return 99 end
+        DCC.Player = PC.Player
+        LP = { IsValid = function() return true end, PlayerController = DCC }
+        E().lp = nil
+        Hooks["/Script/UMG.WidgetLayoutLibrary:RemoveAllWidgets"](); E().removedAt = -10
+        NpcTick(Guard); Frame()
+    """)
+    ok &= check("in the free camera the overlay is made for the camera's controller (yours has no player to show it)",
+                lua.eval("Owners[#Owners] == DCC and E().overlay ~= nil"))
+    lua.execute("""
+        LP = nil; E().lp = nil; DCC.Player = nil
+        WorldTime = 5                                     -- a map loaded fresh, at the old one's address
+        Frame()
+    """)
+    ok &= check("a map loaded fresh at the old map's address is still noticed (its clock started again)",
+                lua.eval("E().overlay == nil and E().samples[9001] == nil"))
+    lua.execute('E().removedAt = -10; NpcTick(Guard); NpcTick(Swat); Hooks[NPC_DIE](Param(Swat)); Frame()')
+    ok &= check("an NPC that dies drops off at once", lua.eval("CardOf('SWAT') == nil"))
+    lua.execute("""
+        Before = E().frame
+        Hooks["/Game/BP/Player/RobberController.RobberController_C:ReceiveTick"](Param(GuestPC))
+    """)
+    ok &= check("on the host, a guest's controller ticking does not run the ESP (only your own does)",
+                lua.eval("E().frame == Before"))
+    lua.execute('OverlaysBefore = #UMG.overlays; Hooks["/Script/UMG.WidgetLayoutLibrary:RemoveAllWidgets"](); Frame()')
+    ok &= check("the game clearing the screen: the overlay is forgotten (the engine frees it), not made again at once",
+                lua.eval("E().overlay == nil and #UMG.overlays == OverlaysBefore"))
+    lua.execute('E().removedAt = -10; NpcTick(Guard); Frame()')
+    ok &= check("a second later it is made again", lua.eval("#UMG.overlays == OverlaysBefore + 1 and E().overlay ~= nil"))
+    lua.execute("""
+        Old = UMG.overlays[#UMG.overlays]
+        EspWorld = { GetAddress = function() return 3300 end, GameState = World.GameState, IsValid = function() return true end }
+        PC.GetWorld = function() return EspWorld end
+        Frame()
+    """)
+    ok &= check("a new map: everything from the old one is forgotten without being touched",
+                lua.eval("E().samples[9001] == nil and E().overlay == nil and Old.InViewport"))
+    lua.execute("""
+        PC.GetWorld = function() return World end
+        Frame()                                           -- back in the first map (a new world for the ESP)
+        E().removedAt = -10; Frame()
+        CAM_TICK = "/Game/BP/Camera/CameraBP.CameraBP_C:ReceiveTick"
+        if not Hooks[CAM_TICK] then E().camerasHooked = E().hookCameras() end
+        -- a security camera: a wall mount with an arm and a head (no Mesh); it may be spotting someone
+        function Camera(address, number, x, spotting)
+            local c = { CamNumber = number, ["Destroyed?"] = false, EMPed = false, ["Ignored?"] = false, ["Possessed?"] = false }
+            function c:IsValid() return true end
+            function c:GetAddress() return address end
+            c.CameraHead = MeshPart("StaticMeshComponent")
+            c.CameraHead.K2_GetComponentLocation = function() return { X = x, Y = 0, Z = 0 } end
+            c.CameraArm = MeshPart("StaticMeshComponent")
+            c.BlueprintCreatedComponents = MakeArray({ c.CameraArm, c.CameraHead })
+            c.SpotPlayerComponent = { SpottedPlayer = spotting and Buddy or Invalid }
+            return c
+        end
+        Cam = Camera(9200, 2, 1100)
+        Spotter = Camera(9201, 3, 1400, true)
+        Hooks[CAM_TICK](Param(Cam)); Hooks[CAM_TICK](Param(Spotter)); Frame()
+    """)
+    ok &= check("camera ESP: security cameras get a square box at their head, named by their number",
+                lua.eval("""(function()
+                    local c = CardOf("Camera 3")
+                    local o = c and c.slot.Offsets
+                    return o ~= nil and math.abs(o.Right - o.Bottom) < 0.001 and c.infoValue == "11 m" and not c.vis.hpFill
+                end)()"""))
+    ok &= check("camera ESP: a camera spotting someone says so in the warning colour",
+                lua.eval("CardOf('Camera 4 (spotting)') ~= nil and CardOf('Camera 4 (spotting)').edges[1].Brush.G < 0.1 "
+                         "and CardOf('Camera 3').edges[1].Brush.B > 0.5"))
+    lua.execute("""
+        SetType("esp camera", "Cameras", "Silhouette")
+        Hooks[CAM_TICK](Param(Cam)); Frame()
+    """)
+    ok &= check("camera silhouettes: the arm and the head are marked (cameras have no body mesh)",
+                lua.eval("Cam.CameraHead.bRenderCustomDepth and Cam.CameraArm.bRenderCustomDepth and Cam.CameraHead.Stencil == 1"))
+    lua.execute('Objects.CameraBP_C = { Cam, Spotter }; SetType("esp camera", "Cameras", "Box"); Hooks[CAM_TICK](Param(Cam)); Frame()')
+    ok &= check("camera silhouettes off: unmarked again", lua.eval("not Cam.CameraHead.bRenderCustomDepth and not Cam.CameraArm.bRenderCustomDepth"))
+    lua.execute("""
+        PC.GetWorld = function() return World end
+        Frame()
+        Log = {}; Console("esp off"); Frame()
+    """)
+    ok &= check("esp off: nothing is shown", lua.eval("E().on == false") and any("ESP off" in m for m in values(g.Log)))
+    lua.execute('PC.GetControlRotation = SavedControlRotation; World.GameState = nil; Objects.NPCBase_C = nil; Characters = nil')
+    lua.execute('if WasOpen then Open(); if WasTab then Tab(WasTab) end else Shut() end')      # the menu as it was
+
+    # --- notarget: guards, cameras and civilians ignore you
+    lua.execute("""
+        -- your character's collision as the game has it (both block the cameras' line and bullets)
+        function Body()
+            local b = { Responses = { [19] = 2, [14] = 2 } }
+            function b:GetCollisionResponseToChannel(ch) return self.Responses[ch] or 1 end
+            function b:SetCollisionResponseToChannel(ch, r) assert(type(ch) == "number" and type(r) == "number"); self.Responses[ch] = r end
+            return b
+        end
+        Pawn.CapsuleComponent, Pawn.Mesh = Body(), Body()
+        Pawn.PawnNoiseEmitter = { LastLocalNoiseVolume = 1, LastRemoteNoiseVolume = 1 }
+        Pawn.Pos = { X = 0, Y = 0, Z = 0 }
+        function Pawn:K2_GetActorLocation() return self.Pos end
+        function Pawn:GetWorld() return World end
+        MyState = { PawnPrivate = Pawn, IsValid = function() return true end, GetAddress = function() return 501 end,
+                    PlayerNamePrivate = FStr("Me") }
+        PC.PlayerState = MyState
+        World.GameState = { PlayerArray = MakeArray({ MyState }) }
+        World.IsValid = function() return true end
+        Authority = true; Log = {}
+        Console("notarget")
+        Frame()
+    """)
+    ok &= check("notarget: on for you only; cameras' line and NPC bullets pass through your character, and you make no noise",
+                any("No target: guards, cameras and civilians ignore you" in m for m in values(g.Log))
+                and lua.eval("Pawn.CapsuleComponent.Responses[19] == 0 and Pawn.Mesh.Responses[19] == 0 and Pawn.Mesh.Responses[14] == 0 "
+                             "and Pawn.PawnNoiseEmitter.LastLocalNoiseVolume == 0 and Pawn['IsSpotted?'] == true"))
+    lua.execute("""
+        DIST = "/Script/Engine.Actor:GetDistanceTo"
+        Watcher = Npc(9300, "NPC_Guard_C", 800)
+        function Watcher:HasAuthority() return true end
+        Passer = Npc(9301, "Civilian_NPC_C", 800)
+        function Passer:HasAuthority() return true end
+    """)
+    ok &= check("notarget: a guard asking how far you are is told you are far away (it neither sees nor shoots you)",
+                lua.eval("PostHooks[DIST](Param(Watcher), Param(800.0)) == 100000.0"))
+    ok &= check("notarget: other distances, and what others ask, are left as they are",
+                lua.eval("PostHooks[DIST](Param(Watcher), Param(650.0)) == nil and PostHooks[DIST](Param(Passer), Param(800.0)) == nil"))
+    lua.execute("""
+        SPOT = "/Game/BP/Component/SpotPlayerComponent.SpotPlayerComponent_C:SpotPlayer"
+        Calledoff = {}
+        Spotter = { SpottedPlayer = Pawn }
+        function Spotter:GetOwner() return Passer end
+        function Spotter:ExecuteUbergraph_SpotPlayerComponent(entry) Calledoff[#Calledoff + 1] = entry end
+        Hooks[SPOT](Param(Spotter))
+    """)
+    ok &= check("notarget: a civilian starting to spot you is called off at once, the game's own way",
+                lua.eval("Calledoff[1] == 93"))
+    lua.execute("""
+        -- civilians see with the engine's PawnSensing: 2000 units, a 55 degree cone, eyes 64 up
+        function Seeing(address, x, yaw)
+            local c = Npc(address, "Civilian_NPC_C", x, { BaseEyeHeight = 64 })
+            c.Yaw = yaw
+            function c:HasAuthority() return true end
+            function c:K2_GetActorRotation() return { Pitch = 0, Yaw = self.Yaw, Roll = 0 } end
+            c.PawnSensing = { bSeePawns = true, SightRadius = 2000, PeripheralVisionAngle = 55, IsValid = function() return true end }
+            return c
+        end
+        Facing = Seeing(9303, 1000, 180)        -- 1000 units away, looking straight at you
+        Away = Seeing(9304, 1000, 0)            -- as near, looking the other way
+        Far = Seeing(9305, 5000, 180)           -- looking at you from beyond its sight
+        Frame()
+        for _, c in ipairs({ Facing, Away, Far }) do Hooks[NPC_TICK](Param(c)) end
+    """)
+    ok &= check("notarget: a civilian looking at you sees only up to just short of you (so it never starts to spot you)",
+                abs(lua.eval("Facing.PawnSensing.SightRadius") - ((1000 ** 2 + 64 ** 2) ** 0.5 - 150)) < 0.01
+                and lua.eval("Away.PawnSensing.SightRadius == 2000 and Far.PawnSensing.SightRadius == 2000"))
+    lua.execute("""
+        local had, open = Menu() ~= nil, Menu() ~= nil and Menu().open
+        OARCommands.State.npcHooked = true
+        Console("reloadconfig")                 -- throws the menu away; it is opened again below as it was
+        Facing.Yaw = 0; Hooks[NPC_TICK](Param(Facing))
+        if had then Console("opengui"); if not open then Console("opengui") end end
+    """)
+    ok &= check("notarget: once you are not in front of it, the civilian's own sight range is back (also after reloadconfig)",
+                lua.eval("Facing.PawnSensing.SightRadius == 2000"))
+    lua.execute("Facing.Yaw = 180; Hooks[NPC_TICK](Param(Facing)); Objects.NPCBase_C = { Facing, Away, Far }")
+    lua.execute("""
+        Cop = Npc(9302, "NPC_Police_regular_C", 900, { TargetPlayer = Pawn, ["Sensing?"] = true })
+        function Cop:HasAuthority() return true end
+        Hooks[NPC_TICK](Param(Cop))
+    """)
+    ok &= check("notarget: an officer that picked you as its target drops it",
+                lua.eval("Cop.TargetPlayer == Invalid and Cop['Sensing?'] == false"))
+    lua.execute('Log = {}; Console("notarget"); Frame()')
+    ok &= check("notarget again: off, and your character is as it was (and every civilian's sight range)",
+                any("No target is off" in m for m in values(g.Log))
+                and lua.eval("Facing.PawnSensing.SightRadius == 2000")
+                and lua.eval("Pawn.CapsuleComponent.Responses[19] == 2 and Pawn.Mesh.Responses[19] == 2 and Pawn.Mesh.Responses[14] == 2 "
+                             "and Pawn['IsSpotted?'] == false and PostHooks[DIST](Param(Watcher), Param(800.0)) == nil"))
+    lua.execute('OARCommands.State.share.silentUntil = 0; Authority = false; Sent = {}; QueueDelays = true; Log = {}; Console("notarget")')
+    ok &= check("guest: notarget goes to the host (the host's guards are the ones that must not see you)",
+                g.Sent[1].endswith(" notarget") and any("Asked the host" in m for m in values(g.Log)))
+    lua.execute('HostReply("[OAR host] " .. LastSentId() .. " ok No target"); RunDelays(); QueueDelays = false; Authority = true')
+    lua.execute('World.GameState = nil; PC.PlayerState = nil; Objects.NPCBase_C = nil')
     lua.execute('OARCommands.Exports.Share.Notice("hello from the host")')
     ok &= check("notices (the host's answers) show at the bottom of the menu", "hello from the host" in g.Menu().status.TextValue)
 

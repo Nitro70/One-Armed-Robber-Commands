@@ -65,6 +65,7 @@ Notes:
 | Command | What it does |
 |---|---|
 | `opengui` | Open the in-game menu; again to close it (see [The menu](#the-menu-opengui)). `bind f1 opengui` puts it on F1 |
+| `esp` / `esp on` / `esp off` | Mark guards, police and players through walls (see [ESP](#esp)). `bind f2 esp` puts it on F2 |
 | `bind <key> <command>` | Put a command on a key, e.g. `bind x destroytarget` |
 | `bind <key> "<a> \| <b>"` | Several commands on one key, e.g. `bind f1 "god \| ghost"` |
 | `bind` | List your binds |
@@ -97,12 +98,14 @@ Notes:
 | `doors` | How many doors are locked and open, and whether the vault is open |
 | `doors unlock` / `doors unlock all` | Host: unlock the door you are looking at / every door; they stay shut |
 | `doors open [all]` / `doors close [all]` | Host: open or close the door you are looking at / every door |
+| `doors lock` / `doors lock all` | Host: lock the door you are looking at / every door again, closing it first |
 | `doors vault open` | Host: open the vault. It cannot be closed again (the game has no way to) |
 | `guards` | How many guards are alive, alert and down, and the phones ringing |
 | `guards kill [all]` | Host: kill the guard you are looking at / every guard, as if shot (a phone rings unless they were alert) |
 | `guards remove [all]` | Host: take the guard you are looking at / every guard and body out of the heist (no body, no phone) |
 | `guards phones answer` / `remove` | Host: answer every ringing guard phone as a scanner does (no alarm) / take the phones away |
 | `noclip` | Fly through walls: WASD, Space up, Ctrl down, Shift twice as fast; again to land |
+| `notarget` | Guards, cameras and civilians ignore you (only you); again to turn it off |
 | `revive` | Get back up with full health |
 | `selectmap [heist]` | Host: pick the heist from the console; with no name, list the heists |
 | `forcemap [map]` | Host: start a map now for everyone, with no ready-up and no countdown |
@@ -121,7 +124,7 @@ heists and in the lobby.
   fly, teleport, revive, god mode, ammo, copy or delete what you look at), **Spawn**, **Heist**
   (alarm, cameras, keypads, police, guards and their phones, the team, XP for everyone, truck
   money, loot, escape),
-  **Doors** (the door you look at, every door, the vault), **Progress** (cash, level, XP, skills,
+  **Doors** (the door you look at, every door, the vault), **ESP** (see [ESP](#esp)), **Progress** (cash, level, XP, skills,
   gear), **World** (game speed, size, freeze, free camera, FPS), **Lobby** (pick or start a
   heist), **Binds**, **Settings** and, with Advanced on, **Code**.
 - **Settings**: your own settings, saved in `settings.lua` next to `config.lua` so they stay after
@@ -314,6 +317,22 @@ same command takes you back. Binds also follow you into the debug camera, so a k
 `teleport` moves your character to what your character is aiming at, not to the debug camera, so
 it cannot bring you to where the free camera is.
 
+### notarget
+
+- `notarget` hides you from the guards, the security cameras and civilians; `notarget` again (or
+  `notarget off`) turns it off. Only the player who turns it on is hidden: everyone else is seen as
+  usual. It is also a switch in the menu's Player tab.
+- Guards do not see you at all (no spotting meter, no warning, no escort or arrest) and do not
+  shoot at you; cameras look straight through you; civilians do not see you either: while you
+  are in front of one, its sight ends just short of you (so it can miss someone right behind you
+  for that moment). Your gunshots and footsteps make no noise, NPC bullets pass
+  through you, and a guard or police officer that picks you as its target after someone else set
+  off the alarm drops it.
+- All the game's AI runs on the host, so the host's mod does it. As a guest, `notarget` goes to
+  the host by itself (command sharing at 1 or more), and the host's guards then ignore you.
+- It does not stop alarms you set off yourself (glass, lasers, keypads, C4, a knocked out
+  guard's phone), and bodies or loot are still seen.
+
 ### noclip
 
 - `noclip` turns it on, `noclip` again lands you.
@@ -410,10 +429,16 @@ Otherwise they say that only the host can. The "show" forms (`alarm`, `cops`, `c
   stop spotting). Guards may notice those.
 - `codes` lists every keypad's code with how far away it is. `codes open` unlocks every keypad the
   way hacking one does.
-- `bringloot` teleports every loose valuable to a stack above the truck's money area, where it
-  lands and counts the game's own way. It leaves alone what a player is holding, what is stuck to
-  a bag, and what is already in the truck. The stack size is set in `config.lua`
-  (`BringLootColumns`, `BringLootRows`, `BringLootSpacing`, `BringLootLayerHeight`).
+- `bringloot` drops every loose valuable into the truck's cargo hold, where it lands and counts the
+  game's own way. The pieces are spread over the hold's floor in the truck's own directions, middle
+  first, and dropped one layer at a time from just above the floor, so each layer lands before the
+  next one comes down and nothing ends up on the roof. Each piece is picked up and let go the game's
+  way first, so pieces that only move once a player picked them up fall instead of floating, and
+  guests see them move. A very big haul that does not fit at once
+  is reported: type `bringloot` again once the first lot has landed. It leaves alone what a player
+  is holding, what is stuck to a bag, and what is already in the truck. The layout is set in
+  `config.lua` (`BringLootSpacing`, `BringLootMargin`, `BringLootFloorGap`, `BringLootLayerHeight`,
+  `BringLootMaxHeight`, `BringLootWaveMs`).
 - `escape` presses the escape button for you, even when not everyone is in the truck or the
   minimum take is not there: everyone gets the win screen with what is in the truck.
 
@@ -423,7 +448,17 @@ Otherwise they say that only the host can. The "show" forms (`alarm`, `cops`, `c
   frame or the wall right beside it counts too. `doors unlock all` unlocks every door in the map:
   lock-picked doors, keycard and hacked doors, hand-scanner doors, and doors that lock once the
   alarm goes off. It uses the door's own unlock, so every player sees it, and unlike picking an
-  alarm lock it sets nothing off. The game has no way to lock a door again.
+  alarm lock it sets nothing off.
+- `doors lock` locks the door you are looking at again, and `doors lock all` locks every door in
+  the map (also the ones that were never locked). The game has no lock of its own, so the mod puts
+  back what a locked door starts the heist with: nobody can open it with E, it is named
+  "Door (locked)", and on a padlock door both padlocks can be picked or cut again (the spot the
+  grinder, drill and C4 work on comes back). An open door is closed first; one that is swinging
+  open is closed once it stops. `doors unlock` (or `unlock all`) undoes it.
+- What a lock does not do: guards and police still open locked doors, as they do in the game. A
+  keypad that only works once does not open its door again after a keycard or a hack already
+  used it (the game keeps that inside the keypad, out of the mod's reach); hand scanners and
+  keypads that reset themselves work again. Players who join later see the door's old name.
 - `doors open` and `doors close` (with `all` for every door) swing doors open or shut. The game's
   own open is a toggle, so the command leaves a door alone that is already where you want it or
   still swinging. Opening unlocks the door first. No guard is alerted.
@@ -432,7 +467,7 @@ Otherwise they say that only the host can. The "show" forms (`alarm`, `cops`, `c
   to close it, so the command warns you, and `doors vault close` says so. Players who join after
   it opened see it shut but can walk through, the same as in the game.
 - `door` is the same command as `doors`.
-- As a guest, `doors unlock` (and open, close) sends your camera position along, so the host's
+- As a guest, `doors unlock` (and open, close, lock) sends your camera position along, so the host's
   mod unlocks the door **you** are looking at.
 
 ### guards
@@ -452,6 +487,34 @@ Otherwise they say that only the host can. The "show" forms (`alarm`, `cops`, `c
 - `guards` on its own shows how many guards are alive, alert and down, and the phones ringing.
 - As a guest, `guards kill` and `guards remove` send your camera along, so the host's mod acts on
   the guard **you** are looking at.
+
+### ESP
+
+`esp` (or the **ESP** tab of the menu) marks guards, police, civilians and the other players on
+your screen, also through walls. It is only on your own screen and works the same as a guest.
+
+- **Groups**, each with its own settings: Guards, Police (every type: regular, helmet, SWAT,
+  shield, blinding shield, juggernaut), Police specials (the interceptor and the powerbox
+  defuser), Cameras (security cameras, marked at their head; it says when one is blinded,
+  EMP'd, watched or spotting someone), Civilians (off at first) and Other players.
+- **ESP type** per group: **Box** (a box around them), **Silhouette** (their body outlined
+  through walls) or **Both**.
+- **Per group**: show or hide, which silhouette colour (first or second), a box, corners only or
+  no box, a colour for the box, names and lines (typed like `#ffb329`), a see-through fill, the
+  name (the kind of guard or police, or the player's name), the distance, a health bar, a head
+  dot, a line from the bottom, middle or top of the screen, a warning colour (a guard that is
+  alert or searching, a hostage or scared civilian, a downed player) and a range in metres.
+- **Look**: line thickness, text size, how solid the fill is, the most targets shown at once
+  (the nearest), and what to do with targets you can see directly: show, dim or hide them (so
+  only the ones behind walls are marked).
+- **Silhouettes through walls**: the game's own outline effect (the one it uses for a guard that
+  spots you) around the bodies themselves: two colours (each group picks the first or the
+  second), the style (**Outline** around the body, or **Filled**: a thick band inside it, which
+  looks solid on people further away), thickness and brightness. While any silhouettes are on,
+  the game's own outlines take those colours too, and they are only in heist maps.
+- Every change is used at once and saved in `settings.lua`; **Reset ESP** goes back to the
+  defaults, which are `V.Esp` in `config.lua`.
+- Dead and tied-up NPCs are not marked (the game stops their updates).
 
 ### infiniteammo
 

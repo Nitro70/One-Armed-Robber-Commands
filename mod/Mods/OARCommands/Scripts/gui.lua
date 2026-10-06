@@ -1365,4 +1365,7 @@ Kit.TickEvent = "/Game/BP/Player/RobberController.RobberController_C:ReceiveTick
 -- The game clearing the screen (a native engine function, so UE4SS can hook it).
 Kit.RemoveAllEvent = "/Script/UMG.WidgetLayoutLibrary:RemoveAllWidgets"
 
+-- The pieces for making widgets, for esp.lua's overlay.
+Kit.UClass, Kit.Make, Kit.Paint, Kit.Color, Kit.Margin, Kit.Valid = UClass, Make, Paint, Color, Margin, Valid
+
 return Kit

@@ -112,10 +112,12 @@ local V = {
     ------------------------------------------------------------------------------------------
     -- bringloot: how the loot is stacked over the truck's money area
     ------------------------------------------------------------------------------------------
-    BringLootColumns = 5,            -- pieces side by side
-    BringLootRows = 4,
     BringLootSpacing = 45,           -- distance between pieces
+    BringLootMargin = 60,            -- kept free along the sides (shelves and desks stand there)
+    BringLootFloorGap = 60,          -- the first layer is dropped this high above the floor
     BringLootLayerHeight = 35,       -- each further layer this much higher
+    BringLootMaxHeight = 200,        -- never dropped higher above the floor (the roof is about 330 up)
+    BringLootWaveMs = 250,           -- one layer at a time, this long apart
 
     ------------------------------------------------------------------------------------------
     -- doors
@@ -129,6 +131,44 @@ local V = {
     -- Anything from there can be set here, e.g. Menu = { width = 1200, accent = { 0.3, 0.7, 1, 1 } },
     ------------------------------------------------------------------------------------------
     Menu = {},
+
+    ------------------------------------------------------------------------------------------
+    -- esp: what the ESP shows. opengui > ESP changes these for you (saved in settings.lua);
+    -- these are the defaults. Colours "#rrggbb"; Box "box", "corners" or "off"; Line "off",
+    -- "bottom", "middle" or "top"; Range in metres. Warn: a second colour for a guard that is
+    -- alert or searching, a hostage or scared civilian, a downed player. Sil: their silhouette
+    -- through walls, in the silhouettes' first or second colour (SilColor 1 or 2).
+    ------------------------------------------------------------------------------------------
+    Esp = {
+        on = false,
+        guard = { On = true, Color = "#ffb329", Box = "box", Fill = false, Name = true, Distance = true,
+                  Health = true, Head = false, Line = "off", Warn = true, WarnColor = "#ff3b30", Range = 200,
+                  Sil = false, SilColor = 1 },
+        police = { On = true, Color = "#4f8cff", Box = "box", Fill = false, Name = true, Distance = true,
+                   Health = true, Head = false, Line = "off", Warn = false, WarnColor = "#ff3b30", Range = 200,
+                   Sil = false, SilColor = 1 },
+        special = { On = true, Color = "#c04cff", Box = "box", Fill = false, Name = true, Distance = true,
+                    Health = true, Head = false, Line = "off", Warn = false, WarnColor = "#ff3b30", Range = 200,
+                    Sil = false, SilColor = 1 },
+        camera = { On = true, Color = "#2ad4ff", Box = "box", Fill = false, Name = true, Distance = true,
+                   Health = false, Head = false, Line = "off", Warn = true, WarnColor = "#ff3b30", Range = 200,
+                   Sil = false, SilColor = 1 },
+        civilian = { On = false, Color = "#d9d9d9", Box = "corners", Fill = false, Name = true, Distance = false,
+                     Health = false, Head = false, Line = "off", Warn = true, WarnColor = "#ffe14d", Range = 100,
+                     Sil = false, SilColor = 2 },
+        player = { On = true, Color = "#5fd68a", Box = "corners", Fill = false, Name = true, Distance = true,
+                   Health = true, Head = false, Line = "off", Warn = true, WarnColor = "#ff3b30", Range = 1000,
+                   Sil = false, SilColor = 2 },
+        thickness = 2,                   -- lines, in screen units
+        textSize = 12,
+        fillOpacity = 20,                -- how solid a box's fill is, in %
+        visible = "show",                -- targets you can see directly: "show", "dim" or "hide"
+        maxTargets = 40,                 -- the nearest this many are shown
+        -- silhouettes through walls (the game's own outline effect; it has two colours)
+        glowEnemy = "#ff3b30", glowTeam = "#5fd68a",   -- the first and the second colour
+        glowWidth = 2, glowBright = 1,
+        glowStyle = "outline",           -- "outline" around the body, or "band": filled (a thick band inside it)
+    },
     ChangeLog = "OAR\\Saved\\SaveGames\\OARCommands-changes.log",   -- inside your local application data folder
 
     ------------------------------------------------------------------------------------------
@@ -165,7 +205,7 @@ local V = {
     ShareLevelNames = { [0] = "off", "player commands", "player and world commands", "everything except the block list" },
     -- Level 1 and up: commands that act on the guest who typed them
     SharePlayerCommands = { "summon", "spawn", "summonstop", "dupe", "revive", "noclip", "god", "ghost", "fly", "walk",
-                            "teleport", "destroytarget" },
+                            "teleport", "destroytarget", "notarget" },
     -- Level 2 and up: commands that change the game for everyone
     ShareWorldCommands = { "destroyall", "slomo", "playersonly", "changesize", "doors", "door", "reviveall", "healall",
                            "godall", "alarm", "cops", "cameras", "codes", "bringloot", "guards" },
@@ -178,7 +218,7 @@ local V = {
         "exec", "deletecloudfiles", "doublefreefindercrash", "mallocframeprofiler", "purchase", "debug",
         -- this mod's commands that always stay on your own game
         "setmoney", "addmoney", "setlevel", "setxp", "maxskills", "unlockall", "bind", "unbind", "unbindall",
-        "commandsharing", "host", "reloadconfig", "setammo", "infiniteammo", "opengui",
+        "commandsharing", "host", "reloadconfig", "setammo", "infiniteammo", "opengui", "esp",
     },
     -- Guest shortcut: typing an engine cheat below (god, ghost...) sends it to the host by itself,
     -- as if you typed "host god". OFF by default: it registers 20 more console commands with UE4SS
@@ -200,12 +240,13 @@ local V = {
 -- defaults; the menu's Default buttons and Reset everything go back to them. Two parts:
 --    commands   values from the table above (noclip speeds, spawn delay...)
 --    look       the menu's colours, sizes and style (see the opengui section)
+--    esp        what the ESP shows (see the esp section)
 --==================================================================================================
 local SETTINGS_FILE = Core.ModDir .. "/settings.lua"
 
 local function LoadSettings()
     local f = io.open(SETTINGS_FILE, "rb")
-    if not f then return { look = {}, commands = {} } end
+    if not f then return { look = {}, commands = {}, esp = {} } end
     local text = f:read("a")
     f:close()
     local chunk = load(text, "=settings.lua", "t", {})          -- data only: it can call nothing
@@ -215,7 +256,8 @@ local function LoadSettings()
         Print("settings.lua could not be read, so the defaults are used")
         t = {}
     end
-    return { look = type(t.look) == "table" and t.look or {}, commands = type(t.commands) == "table" and t.commands or {} }
+    local function part(name) return type(t[name]) == "table" and t[name] or {} end
+    return { look = part("look"), commands = part("commands"), esp = part("esp") }
 end
 local Saved = LoadSettings()
 
@@ -250,7 +292,7 @@ local function SaveSettings()
     local text = table.concat({
         "-- OAR Commands: your settings, set in the menu (opengui > Settings).",
         "-- Delete this file to go back to the defaults.",
-        "return {", block("commands", Saved.commands), block("look", Saved.look), "}", "" }, "\n")
+        "return {", block("commands", Saved.commands), block("look", Saved.look), block("esp", Saved.esp), "}", "" }, "\n")
     local f = io.open(SETTINGS_FILE, "wb")
     if not f then return false end
     f:write(text)
@@ -1258,7 +1300,10 @@ end)
 -- too, so GainedEXP there counts what this heist already gave (for V.SetXPAllMax).
 --------------------------------------------------------------------------------------------------
 local function CharacterName(c)
-    local ok, name = pcall(function() return c.PlayerState.PlayerName:ToString() end)
+    local ok, name = pcall(function() return c.PlayerState.PlayerNamePrivate:ToString() end)
+    if not (ok and name and name ~= "") then
+        ok, name = pcall(function() return c.PlayerState.PlayerName:ToString() end)    -- older engines
+    end
     return ok and name or "a player"
 end
 
@@ -2092,39 +2137,121 @@ Core.Command("codes", function(FullCommand, Parameters, Ar)
     return true
 end)
 
--- Loot is Money_base_C and its subclasses. Each piece not held by a player, not stuck in a bag or
--- to anything else, and not already in the truck is teleported above the truck's money area
--- (MoneyOverlapper) in a stack; landing in it counts it the game's own way (CountMoney).
-Core.Command("bringloot", function(FullCommand, Parameters, Ar)
-    if not HostOnly(Ar, "move the loot", FullCommand) then return true end
-    local truck = FindFirstOf("RobberTruck_C")
-    if not Valid(truck) then Say(Ar, "Only during a heist: there is no getaway truck here") return true end
-    local area = truck.MoneyOverlapper
-    local spot = area:K2_GetComponentLocation()
+-- bringloot: every loose valuable (Money_base_C) that nobody holds, that is not stuck to anything
+-- else and that is not in the truck yet goes into the truck's money area (MoneyOverlapper, a box
+-- over the cargo hold from the floor up to the roof). The truck counts a piece when it lands in
+-- that box and takes it off again when it leaves, so the pieces must stay inside it.
+-- They are laid out over the whole floor of the box in the truck's own directions, nearest the
+-- middle first, and dropped one layer at a time from just above the floor (BringLootWaveMs
+-- apart, so each layer has landed before the next one comes down; pieces put inside each other
+-- are thrown apart by the physics). No layer is higher than BringLootMaxHeight above the floor:
+-- the box reaches the roof, and anything dropped that high lands on it. Each layer looks for the
+-- loot again, so a piece that landed inside is left alone.
+-- Before a piece moves it is picked up and let go the game's way (TakeLikeAPlayer): many pieces
+-- have their physics off (the game turns it off when a piece comes to rest, and pieces placed in
+-- the map start without it) and only fall once a player picked them up, so a piece that was only
+-- moved would hang in the air.
+local function LootSpots(area)
+    local center, ext = area:K2_GetComponentLocation(), area:GetScaledBoxExtent()
+    local fwd, right = area:GetForwardVector(), area:GetRightVector()
+    local spacing = V.BringLootSpacing
+    local hx, hy = math.max(ext.X - V.BringLootMargin, 0), math.max(ext.Y - V.BringLootMargin, 0)
+    local cols, rows = math.floor(2 * hx / spacing) + 1, math.floor(2 * hy / spacing) + 1
+    local spots = {}
+    for row = 0, rows - 1 do
+        for col = 0, cols - 1 do
+            local a, b = (col - (cols - 1) / 2) * spacing, (row - (rows - 1) / 2) * spacing
+            spots[#spots + 1] = { X = center.X + fwd.X * a + right.X * b, Y = center.Y + fwd.Y * a + right.Y * b,
+                                  near = a * a + b * b, n = #spots }
+        end
+    end
+    table.sort(spots, function(p, q) if p.near ~= q.near then return p.near < q.near end return p.n < q.n end)
+    local floor = center.Z - ext.Z
+    local layers = math.max(math.floor((V.BringLootMaxHeight - V.BringLootFloorGap) / V.BringLootLayerHeight) + 1, 1)
+    return spots, floor, layers
+end
+
+-- The loose loot that is not in the truck yet.
+local function LooseLoot(area)
     local held = {}
     for _, c in ipairs(Players()) do
         local h = c.HoldingActor
         if Valid(h) then held[h:GetAddress()] = true end
     end
-    local perLayer = V.BringLootColumns * V.BringLootRows
-    local moved, value = 0, 0
+    local out = {}
     for _, loot in ipairs(AllOf("Money_base_C")) do
-        local parent = loot:GetAttachParentActor()
-        if not held[loot:GetAddress()] and not Valid(parent) and not area:IsOverlappingActor(loot) then
-            local i = moved % perLayer
-            local layer = math.floor(moved / perLayer)
-            local col, row = i % V.BringLootColumns, math.floor(i / V.BringLootColumns)
-            local to = {
-                X = spot.X + (col - (V.BringLootColumns - 1) / 2) * V.BringLootSpacing,
-                Y = spot.Y + (row - (V.BringLootRows - 1) / 2) * V.BringLootSpacing,
-                Z = spot.Z + 40 + layer * V.BringLootLayerHeight,
-            }
-            loot:K2_SetActorLocation(to, false, {}, true)
-            moved = moved + 1
-            value = value + (loot.Value or 0)
+        if not held[loot:GetAddress()] and not Valid(loot:GetAttachParentActor()) and not area:IsOverlappingActor(loot) then
+            out[#out + 1] = loot
         end
     end
-    Say(Ar, string.format("Moved %d pieces of loot worth %s into the truck", moved, Fmt(value)))
+    return out
+end
+
+-- What a player's pick up and let go does to a piece, on the host: its physics on (PlayerCharacter
+-- "Pick up item": movable, simulate physics), then its own PickupItemComponent OnPickedUp (the
+-- first time: the pickup collision, its lighter mass, and the check that turns physics off again
+-- once it lies still) and OnDropped (the first time: it replicates and gets its SmoothSync, so
+-- guests see it move).
+local function TakeLikeAPlayer(loot)
+    pcall(function()
+        local root = loot:K2_GetRootComponent()
+        if not root:IsSimulatingPhysics(FName("None")) then
+            root:SetMobility(2)                                          -- EComponentMobility::Movable
+            root:SetSimulatePhysics(true)
+        end
+    end)
+    pcall(function()
+        local pickup = loot.PickupItemComponent
+        if Valid(pickup) then
+            pickup:OnPickedUp()
+            pickup:OnDropped()
+        end
+    end)
+end
+
+-- Drop one layer: returns how many pieces were placed.
+local function DropLootLayer(area, spots, floor, layer)
+    local z = floor + V.BringLootFloorGap + layer * V.BringLootLayerHeight
+    local placed = 0
+    for _, loot in ipairs(LooseLoot(area)) do
+        if placed >= #spots then break end
+        placed = placed + 1
+        local spot = spots[placed]
+        TakeLikeAPlayer(loot)
+        loot:K2_SetActorLocation({ X = spot.X, Y = spot.Y, Z = z }, false, {}, true)
+    end
+    return placed
+end
+
+Core.Command("bringloot", function(FullCommand, Parameters, Ar)
+    if not HostOnly(Ar, "move the loot", FullCommand) then return true end
+    local truck = FindFirstOf("RobberTruck_C")
+    if not Valid(truck) then Say(Ar, "Only during a heist: there is no getaway truck here") return true end
+    local area = truck.MoneyOverlapper
+    local loose = LooseLoot(area)
+    if #loose == 0 then Say(Ar, "No loose loot to move (it is all in the truck, held or in bags)") return true end
+    local spots, floor, layers = LootSpots(area)
+    local fits = math.min(#loose, #spots * layers)
+    local value = 0
+    for i = 1, fits do value = value + (loose[i].Value or 0) end
+
+    State.bringLootGeneration = (State.bringLootGeneration or 0) + 1
+    local generation, world = State.bringLootGeneration, WorldOf(truck)
+    local function wave(layer)
+        if generation ~= State.bringLootGeneration then return end     -- bringloot was typed again
+        local t = FindFirstOf("RobberTruck_C")
+        if not Valid(t) or WorldOf(t) ~= world then return end         -- another map
+        local a = t.MoneyOverlapper
+        if DropLootLayer(a, spots, floor, layer) > 0 and layer + 1 < layers then
+            ExecuteWithDelay(V.BringLootWaveMs, function() ExecuteInGameThread(function() wave(layer + 1) end) end)
+        end
+    end
+    wave(0)
+
+    local waves = math.ceil(fits / #spots)
+    Say(Ar, string.format("Moving %d %s of loot worth %s into the truck%s%s", fits, fits == 1 and "piece" or "pieces", Fmt(value),
+        waves > 1 and string.format(" (in %d layers, %.2fs apart)", waves, V.BringLootWaveMs / 1000) or "",
+        #loose > fits and string.format(". %d more do not fit at once: bringloot again once these have landed", #loose - fits) or ""))
     return true
 end)
 
@@ -2191,8 +2318,10 @@ end)
 --    doors unlock all       unlock every door in the map
 --    doors open [all]       open the door you are looking at (or every door), unlocking it first
 --    doors close [all]      close it (or every open door)
+--    doors lock [all]       lock it again (or every door), closing it first
 --    doors vault            whether the vault is open
 --    doors vault open       open the vault. It can NOT be closed again: the game has no way to
+--                           close a vault
 --    door ...               the same as doors
 --
 -- Doors are DoorBP_C and its subclasses: lock-picked doors (DoorBP_Locked_C, and
@@ -2201,7 +2330,16 @@ end)
 -- PowerLocked? is set once the alarm has gone off (AlarmTriggered?).
 -- Unlocking uses the door's own UnlockDoor, a multicast every player's game runs (Locked? off,
 -- the "Door" name), after clearing PowerLocked? (UnlockDoor keeps it once the alarm went off).
--- Unlike picking an alarm lock, no alarm goes off. The game has no way to lock a door again.
+-- Unlike picking an alarm lock, no alarm goes off.
+-- The game has no way to lock a door again, so lock puts back what a map starts a locked door
+-- with (read from the game's scripts): Locked? (every player's E on a door is checked against it
+-- on the host), the name "Door (locked)" (through the door's own SetDoorName multicast), a shot
+-- open door's health, and on padlock doors both padlocks as before they were picked (Unlocked?
+-- off, their health, the spot the grinder, drill and C4 work on made again) and the host's inside
+-- handle. An open door is closed first (one that is swinging open, once it stops). Guards still
+-- open locked doors, as they always could, and a keycard or hack that already opened its door
+-- does not open it again on keypads that work only once (the game keeps that inside the keypad's
+-- script, where Lua cannot reach it).
 -- Opening and closing use the door's own OpenDoorServer, which TOGGLES the door, so it is only
 -- called on a door that is not already open (or shut) and not swinging (Opening?). The door
 -- itself is passed as the player who opens it, so no guard is alerted.
@@ -2290,14 +2428,73 @@ local function VaultSummary(vaults)
     return string.format("Vaults: %d (%d open)", #vaults, open)
 end
 
-local DOORS_USAGE = "Usage: doors   |   doors unlock [all]   |   doors open [all]   |   doors close [all]   |   " ..
+-- A padlock (one of the two on a padlock door) back as it was before it was picked or cut.
+local TOOL_SPOT = "/Game/BP/Utility/ToolSpot.ToolSpot_C"
+local INSIDE_HANDLE = "/Game/BP/Utility/UnlockCollision.UnlockCollision_C"
+local function RelockPadlock(door, part)
+    local lock = door[part].ChildActor
+    if not Valid(lock) then return end
+    if lock["Unlocked?"] then SetReplicated(lock, "Unlocked?", false) end
+    pcall(function() lock.ToolOwnerComponent.Health = 10 end)
+    pcall(function() lock.SpottedHighlightcomponent["CanHighlight?"] = true end)
+    pcall(function()
+        local spot = lock.ToolSpotChild
+        if not Valid(spot.ChildActor) then
+            local cls = LoadClass(TOOL_SPOT)
+            if cls then spot:SetChildActorClass(cls) end
+        end
+    end)
+end
+
+-- Close a door once it has stopped swinging open. It is found again by its name: no object is kept.
+local function CloseWhenStill(door)
+    local path, seconds = door:GetFullName(), V.DoorOpenTime
+    pcall(function() seconds = math.max(seconds, door.OpenTime or 0) end)
+    ExecuteWithDelay(math.floor(seconds * 1000) + 300, function()
+        ExecuteInGameThread(function()
+            for _, d in ipairs(AllOf("DoorBP_C")) do
+                if d:GetFullName() == path then
+                    if d["Locked?"] then pcall(MoveOneDoor, d, false) end
+                    return
+                end
+            end
+        end)
+    end)
+end
+
+-- Lock one door again. Returns whether it was not locked before, and whether it is being closed.
+local function LockOneDoor(door)
+    local was = door["Locked?"] and true or false
+    pcall(function() door:FlushNetDormancy() end)
+    SetReplicated(door, "Locked?", true)
+    pcall(function() if (door.Health or 50) <= 0 then SetReplicated(door, "Health", 50) end end)
+    pcall(function() door:SetDoorName("Door (locked)") end)
+    for _, part in ipairs({ "Lock", "Lock1" }) do pcall(RelockPadlock, door, part) end
+    pcall(function()
+        local handle = door.UnlockSide.ChildActor             -- padlock doors' inside handle
+        if Valid(handle) then
+            handle.Box:SetCollisionEnabled(3)
+        else
+            local cls = LoadClass(INSIDE_HANDLE)
+            if cls then door.UnlockSide:SetChildActorClass(cls) end
+        end
+    end)
+    if door["Opening?"] then
+        if door["Open?"] then return not was, false end      -- swinging shut already
+        CloseWhenStill(door)
+        return not was, true
+    end
+    return not was, door["Open?"] and MoveOneDoor(door, false) or false
+end
+
+local DOORS_USAGE = "Usage: doors   |   doors unlock [all]   |   doors open [all]   |   doors close [all]   |   doors lock [all]   |   " ..
     "doors vault   |   doors vault open"
 
 local function DoorsCommand(FullCommand, Parameters, Ar)
     local p = Parameters or {}
     local verb, scope = (p[1] or ""):lower(), (p[2] or ""):lower()
     local all = scope == "all"
-    local known = verb == "" or ((verb == "unlock" or verb == "open" or verb == "close") and (scope == "" or all))
+    local known = verb == "" or ((verb == "unlock" or verb == "open" or verb == "close" or verb == "lock") and (scope == "" or all))
         or (verb == "vault" and (scope == "" or scope == "open" or scope == "close"))
     if not known then Say(Ar, DOORS_USAGE) return true end
     local doors, vaults = AllOf("DoorBP_C"), AllOf("VaultDoor_C")
@@ -2329,7 +2526,8 @@ local function DoorsCommand(FullCommand, Parameters, Ar)
     end
 
     if #doors == 0 then Say(Ar, "No doors here (only in a heist)") return true end
-    local what = (verb == "unlock" and "unlock doors") or (verb == "open" and "open doors") or "close doors"
+    local what = (verb == "unlock" and "unlock doors") or (verb == "open" and "open doors")
+        or (verb == "lock" and "lock doors") or "close doors"
     if not HostOnly(Ar, what, FullCommand, { aim = not all }) then return true end
     local targets = doors
     if not all then
@@ -2342,12 +2540,26 @@ local function DoorsCommand(FullCommand, Parameters, Ar)
         end
         targets = { door }
     end
-    local changed = 0
+    local changed, closing = 0, 0
     for _, d in ipairs(targets) do
-        local ok, did
-        if verb == "unlock" then ok, did = pcall(UnlockOneDoor, d) else ok, did = pcall(MoveOneDoor, d, verb == "open") end
+        local ok, did, shut
+        if verb == "unlock" then ok, did = pcall(UnlockOneDoor, d)
+        elseif verb == "lock" then ok, did, shut = pcall(LockOneDoor, d)
+        else ok, did = pcall(MoveOneDoor, d, verb == "open") end
         if ok and did then changed = changed + 1 end
+        if ok and shut then closing = closing + 1 end
         if not ok then Print("doors " .. verb .. ": " .. tostring(did)) end
+    end
+    if verb == "lock" then
+        if not all then
+            Say(Ar, (changed > 0 and "Locked the door" or "That door is already locked")
+                .. (closing > 0 and " and closed it" or "") .. ". Guards can still open it; doors unlock undoes it")
+            return true
+        end
+        Say(Ar, string.format("Locked %d doors (%d being closed). Guards can still open locked doors; padlocks can " ..
+            "be picked again; a keycard or hack used once may not open its door again. doors unlock all undoes it. ",
+            changed, closing) .. DoorSummary(doors))
+        return true
     end
     if not all then
         local done = { unlock = "Unlocked the door (it stays shut)", open = "Opened the door", close = "Closed the door" }
@@ -2555,6 +2767,291 @@ do                                    -- (a block: config.lua is near Lua's limi
             return true
         end
         Say(Ar, done > 0 and ("Killed " .. Many(done, "guard", "guards") .. phonesNote) or "Every guard is already down")
+        return true
+    end)
+end
+
+--------------------------------------------------------------------------------------------------
+-- notarget  (on your own character; a guest's goes to the host through command sharing)
+--
+--    notarget         guards, cameras and civilians ignore you; again to turn it off
+--    notarget on|off
+--
+-- Only the player who turns it on is hidden; everyone else is seen as usual. All the game's AI
+-- runs on the host, so this is done there, also for a guest (the host's mod does it for the
+-- guest's character; a guest without command sharing cannot hide from a host's guards).
+-- How each part is done (from the game's own scripts, 2026-10-05):
+--   - Guards decide what they see and whether to shoot by the distance to a player (their "See
+--     pawn" event and their shooting both ask the engine's GetDistanceTo first). For a hidden
+--     player that answer is made "too far" (a hook on the engine function, which UE4SS lets
+--     change the result): no spotting meter, no warning, no escort or arrest, no shots.
+--   - Cameras see a player with a line on their own collision channel (CameraTrace), which
+--     nothing else in the game uses: the hidden player's body lets it pass.
+--   - Civilians see with the engine's own sight check (PawnSensing), which asks nothing a hook
+--     could answer, and start their spotting meter straight from it. So while a hidden player is
+--     in front of a civilian, that civilian's sight ends just short of the hidden player (it is
+--     put back once no hidden player is in front of it). It still sees everything nearer; what
+--     is right behind the hidden player it misses for that moment. As a backstop, a spot that
+--     starts on the hidden player anyway is called off at once, the way the game does when it
+--     loses sight of someone.
+--   - Hearing: the hidden player's gunshots and footsteps make no noise for anyone.
+--   - NPC bullets pass through the hidden player (the Shoot channel), and a guard or police
+--     officer that picks the hidden player as its target (after someone else sets off the alarm)
+--     drops that target.
+--   - IsSpotted? (the game's own "already spotted" flag, which nothing else writes) is set, so
+--     restricted areas do not count either.
+-- Not covered: alarms you set off yourself (glass, lasers, keypads, C4, a knocked out guard's
+-- phone), and bodies or loot others see.
+--------------------------------------------------------------------------------------------------
+local NotargetFrame, NotargetNpc, NotargetOnFor     -- the menu's per-frame hook and the NPCs' use them
+local EnsureFrameHooks                              -- set by the menu section: the per-frame hooks
+
+do
+    local CAMERA_TRACE, SHOOT = 19, 14              -- ECollisionChannel: GameTraceChannel6, GameTraceChannel1
+    local IGNORE = 0
+    local SPOT = "/Game/BP/Component/SpotPlayerComponent.SpotPlayerComponent_C:SpotPlayer"
+    local SHOT = "/Game/BP/Player/PlayerCharacter.PlayerCharacter_C:ShootFunction"
+    local DISTANCE = "/Script/Engine.Actor:GetDistanceTo"
+
+    State.notarget = State.notarget or { players = {}, count = 0, pawns = {} }
+    local nt = State.notarget
+    nt.spots = nt.spots or {}       -- where the hidden characters are this frame: { x, y, z } each
+    nt.sight = nt.sight or {}       -- NPC address -> its own sight range, while it is shortened
+
+    -- An object parameter or value that is None (UE4SS 3.0.1 cannot pass nil).
+    local function None() return StaticFindObject("/Script/UMG.OARCommands_NoSuchObject") end
+
+    local function Active() return nt.count > 0 end
+
+    local function StateName(ps)
+        local ok, name = pcall(function() return ps.PlayerNamePrivate:ToString() end)
+        if not (ok and name and name ~= "") then ok, name = pcall(function() return ps.PlayerName:ToString() end) end
+        return ok and name or "?"
+    end
+
+    -- The hidden players' characters in a world: { pawn, entry } each, found now (a player is
+    -- kept by the address of their PlayerState, checked against their name).
+    local function Hidden(world)
+        local out = {}
+        if not Active() then return out end
+        local arr = world.GameState.PlayerArray
+        for i = 1, arr:GetArrayNum() do
+            local ps = arr[i]
+            if Valid(ps) then
+                local entry = nt.players[ps:GetAddress()]
+                if entry and StateName(ps) == entry.name then
+                    local pawn = ps.PawnPrivate
+                    if Valid(pawn) then out[#out + 1] = { pawn = pawn, entry = entry } end
+                end
+            end
+        end
+        return out
+    end
+
+    -- Hide a character from cameras and NPC bullets (on), or put back what it had (off).
+    local function Apply(pawn, entry, on)
+        local cap, mesh = pawn.CapsuleComponent, pawn.Mesh
+        if on then
+            local was = {}
+            pcall(function()
+                was.cap = cap:GetCollisionResponseToChannel(CAMERA_TRACE)
+                was.mesh = mesh:GetCollisionResponseToChannel(CAMERA_TRACE)
+                was.shoot = mesh:GetCollisionResponseToChannel(SHOOT)
+            end)
+            entry.was = was
+            pcall(function()
+                cap:SetCollisionResponseToChannel(CAMERA_TRACE, IGNORE)
+                mesh:SetCollisionResponseToChannel(CAMERA_TRACE, IGNORE)
+                mesh:SetCollisionResponseToChannel(SHOOT, IGNORE)
+            end)
+        else
+            local was = entry.was or {}
+            pcall(function()
+                cap:SetCollisionResponseToChannel(CAMERA_TRACE, was.cap or 2)    -- 2: Block, as the game has it
+                mesh:SetCollisionResponseToChannel(CAMERA_TRACE, was.mesh or 2)
+                mesh:SetCollisionResponseToChannel(SHOOT, was.shoot or 2)
+            end)
+        end
+        pcall(function() SetReplicated(pawn, "IsSpotted?", on) end)
+    end
+
+    local function Silence(pawn)
+        pcall(function()
+            local n = pawn.PawnNoiseEmitter
+            n.LastLocalNoiseVolume, n.LastRemoteNoiseVolume = 0, 0
+        end)
+    end
+
+    -- Every frame on the host (from your controller's per-frame event): the hidden characters
+    -- (a new character, after a respawn or a new map, is hidden again) and their noise.
+    NotargetFrame = function(pc)
+        if not Active() or not pc:HasAuthority() then return end
+        local pawns, spots = {}, {}
+        for _, h in ipairs(Hidden(pc:GetWorld())) do
+            local a = h.pawn:GetAddress()
+            pawns[a] = true
+            if h.entry.applied ~= a then
+                Apply(h.pawn, h.entry, true)
+                h.entry.applied = a
+            end
+            Silence(h.pawn)
+            local p = h.pawn:K2_GetActorLocation()
+            spots[#spots + 1] = { p.X, p.Y, p.Z }
+        end
+        nt.pawns, nt.spots = pawns, spots
+    end
+
+    -- Civilians' sight (the engine's PawnSensing, on the host only). Guards do not see with their
+    -- own PawnSensing (it only hears); they see through a sensing actor of their own, handled by
+    -- the distance answer below. The engine checks a pawn when it is within SightRadius of the
+    -- NPC's eyes and inside its cone (PeripheralVisionAngle, here widened by CONE_SLACK so a
+    -- rough idea of where it faces is enough); SIGHT_MARGIN keeps the hidden player out of range
+    -- while they move between two checks.
+    local SIGHT_MARGIN, CONE_SLACK = 150, 35
+    local function Sight(npc)
+        local sense = npc.PawnSensing
+        if not (Valid(sense) and sense.bSeePawns) then return end
+        local a = npc:GetAddress()
+        local own = nt.sight[a]
+        local full = own or sense.SightRadius
+        local nearest
+        if #nt.spots > 0 then
+            local eye = npc:K2_GetActorLocation()
+            local ez = eye.Z
+            pcall(function() ez = ez + npc.BaseEyeHeight end)
+            local r = npc:K2_GetActorRotation()
+            local pitch, yaw = math.rad(r.Pitch), math.rad(r.Yaw)
+            local fx, fy, fz = math.cos(pitch) * math.cos(yaw), math.cos(pitch) * math.sin(yaw), math.sin(pitch)
+            local cosine = math.cos(math.rad(math.min(180, sense.PeripheralVisionAngle + CONE_SLACK)))
+            for _, p in ipairs(nt.spots) do
+                local dx, dy, dz = p[1] - eye.X, p[2] - eye.Y, p[3] - ez
+                local d = math.sqrt(dx * dx + dy * dy + dz * dz)
+                if d < full + SIGHT_MARGIN and (d < 1 or (dx * fx + dy * fy + dz * fz) / d >= cosine)
+                    and (not nearest or d < nearest) then
+                    nearest = d
+                end
+            end
+        end
+        if nearest then
+            if not own then nt.sight[a] = full end
+            sense.SightRadius = math.max(0, nearest - SIGHT_MARGIN)
+        elseif own then
+            sense.SightRadius = own
+            nt.sight[a] = nil
+        end
+    end
+
+    -- Every NPC's own sight range back (when nobody is hidden any more).
+    local function RestoreSight()
+        for _, npc in ipairs(AllOf("NPCBase_C")) do
+            local own = nt.sight[npc:GetAddress()]
+            if own then pcall(function() npc.PawnSensing.SightRadius = own end) end
+        end
+        nt.sight, nt.spots = {}, {}
+    end
+
+    -- Every NPC every frame on the host: a civilian does not see a hidden player in front of it,
+    -- and a guard or officer whose target is a hidden player drops it (and stops looking at it).
+    NotargetNpc = function(npc)
+        if not Active() or not npc:HasAuthority() then return end
+        pcall(Sight, npc)
+        local ok, target = pcall(function() return npc.TargetPlayer end)
+        if not (ok and Valid(target) and nt.pawns[target:GetAddress()]) then return end
+        SetReplicated(npc, "TargetPlayer", None())
+        pcall(function() SetReplicated(npc, "Sensing?", false) end)
+    end
+
+    NotargetOnFor = function(pc)
+        local ok, on = pcall(function() return nt.players[pc.PlayerState:GetAddress()] ~= nil end)
+        return ok and on
+    end
+
+    -- Guards: the engine's GetDistanceTo, asked by a guard about a hidden player, says "far away".
+    -- The question's own player cannot be read here (a Blueprint caller's parameters are not
+    -- where UE4SS looks), so the answer is matched against the hidden players' distances.
+    State.notargetDistance = function(ctx, ret)
+        if not Active() then return nil end
+        local d = ret:get()
+        if type(d) ~= "number" or d > 2600 then return nil end      -- beyond what a guard reacts to
+        local guard = ctx:get()
+        if guard:GetClass():GetFName():ToString() ~= "NPC_Guard_C" or not guard:HasAuthority() then return nil end
+        local g = guard:K2_GetActorLocation()
+        for _, h in ipairs(Hidden(guard:GetWorld())) do
+            local p = h.pawn:K2_GetActorLocation()
+            local dx, dy, dz = p.X - g.X, p.Y - g.Y, p.Z - g.Z
+            if math.abs(math.sqrt(dx * dx + dy * dy + dz * dz) - d) < 0.5 then return 100000.0 end
+        end
+        return nil
+    end
+
+    -- Civilians (and a backstop for guards and cameras): a spot that starts on a hidden player
+    -- is called off at once with the component's own "lost sight" step (its ubergraph entry 93:
+    -- warning off everywhere, its timer's gate closed, ready for the next player).
+    local function OnSpot(Context)
+        if not Active() then return end
+        local c = Context:get()
+        local spotted = c.SpottedPlayer
+        if not (Valid(spotted) and nt.pawns[spotted:GetAddress()]) then return end
+        local owner = c:GetOwner()
+        if Valid(owner) and owner:HasAuthority() then c:ExecuteUbergraph_SpotPlayerComponent(93) end
+    end
+
+    -- A hidden player's shot: no noise (heard the same frame otherwise).
+    local function OnShot(Context)
+        if not Active() then return end
+        local pawn = Context:get()
+        if nt.pawns[pawn:GetAddress()] then Silence(pawn) end
+    end
+
+    local function EnsureHooks()
+        if not State.distanceHooked then
+            local ok = pcall(RegisterHook, DISTANCE, function() end, function(ctx, ret)
+                local f = State.notargetDistance
+                if not f then return nil end
+                local fine, value = pcall(f, ctx, ret)
+                if fine then return value end
+                return nil
+            end)
+            State.distanceHooked = ok or nil
+        end
+        if not State.notargetSpotHooked then
+            State.notargetSpotHooked = true
+            HookWhenLoaded(function() return Core.Hook(SPOT, OnSpot) end)
+            HookWhenLoaded(function() return Core.Hook(SHOT, OnShot) end)
+        end
+        if EnsureFrameHooks then EnsureFrameHooks() end
+    end
+    -- after reloadconfig: point the hooks at this code
+    if State.notargetSpotHooked then
+        Core.Hook(SPOT, OnSpot)
+        Core.Hook(SHOT, OnShot)
+    end
+
+    Core.Command("notarget", function(FullCommand, Parameters, Ar)
+        local word = Parameters and Parameters[1] and Parameters[1]:lower() or ""
+        if word ~= "" and word ~= "on" and word ~= "off" then Say(Ar, "Usage: notarget   |   notarget on   |   notarget off") return true end
+        if not HostOnly(Ar, "hide you from the guards", FullCommand) then return true end
+        local pc = Acting()
+        local ok, ps = pcall(function() return pc.PlayerState end)
+        if not (ok and Valid(ps)) then Say(Ar, "No player here yet") return true end
+        local key = ps:GetAddress()
+        local on = word == "on" or (word == "" and not nt.players[key])
+        local entry = nt.players[key]
+        if on and not entry then
+            nt.players[key] = { name = StateName(ps) }
+            nt.count = nt.count + 1
+            EnsureHooks()
+        elseif not on and entry then
+            pcall(function()
+                local pawn = ps.PawnPrivate
+                if Valid(pawn) then Apply(pawn, entry, false); nt.pawns[pawn:GetAddress()] = nil end
+            end)
+            nt.players[key] = nil
+            nt.count = nt.count - 1
+            if nt.count == 0 then RestoreSight() end
+        end
+        Say(Ar, on and "No target: guards, cameras and civilians ignore you (notarget again to turn it off)"
+            or "No target is off: you can be seen again")
         return true
     end)
 end
@@ -2960,7 +3457,10 @@ local function Reply(pc, id, text)
 end
 
 local function PlayerName(pc)
-    local ok, name = pcall(function() return pc.PlayerState.PlayerName:ToString() end)
+    local ok, name = pcall(function() return pc.PlayerState.PlayerNamePrivate:ToString() end)
+    if not (ok and name and name ~= "") then
+        ok, name = pcall(function() return pc.PlayerState.PlayerName:ToString() end)   -- older engines
+    end
     return ok and name or "a guest"
 end
 
@@ -3408,6 +3908,9 @@ MenuTabs[#MenuTabs + 1] = { name = "Player", build = function(ui, menu)
     ui:Row{ label = "Ghost, fly, walk", info = "the game's own: through walls / no gravity / back to normal",
             chips = { { "Ghost", Cheat("ghost", menu) }, { "Fly", Cheat("fly", menu) }, { "Walk", Cheat("walk", menu) } } }
     ui:Row{ label = "Teleport", info = "to where you are looking", chips = { { "Teleport", Cheat("teleport", menu) } } }
+    local hidden = pc and NotargetOnFor(pc) or false
+    ui:Row{ label = "No target", hint = OnOff(hidden), info = "guards, cameras and civilians ignore you",
+            chips = { { hidden and "Turn off" or "Turn on", "notarget" } } }
     ui:Header("Health")
     ui:Row{ label = "Revive", info = "back up with full health", chips = { { "Revive", "revive" } } }
     ui:Row{ label = "God mode", info = "the game's own; again to turn it off", chips = { { "On / off", Cheat("god", menu) } } }
@@ -3530,14 +4033,16 @@ end }
 MenuTabs[#MenuTabs + 1] = { name = "Doors", build = function(ui)
     local doors, vaults = AllOf("DoorBP_C"), AllOf("VaultDoor_C")
     ui:Header("The door you are looking at")
-    ui:Row{ label = "This door", info = "unlock leaves it shut",
-            chips = { { "Unlock", "doors unlock" }, { "Open", "doors open" }, { "Close", "doors close" } } }
+    ui:Row{ label = "This door", info = "unlock leaves it shut; lock closes it",
+            chips = { { "Unlock", "doors unlock" }, { "Open", "doors open" }, { "Close", "doors close" }, { "Lock", "doors lock" } } }
     ui:Header("Every door")
     ui:Row{ label = "All doors", hint = #doors > 0 and DoorSummary(doors):gsub("^Doors: ", "") or "not here",
-            chips = { { "Unlock all", "doors unlock all" }, { "Open all", "doors open all" }, { "Close all", "doors close all" } } }
+            chips = { { "Unlock all", "doors unlock all" }, { "Open all", "doors open all" }, { "Close all", "doors close all" },
+                      { "Lock all", "doors lock all", confirm = "Lock every door. Sure?" } } }
     ui:Header("Vault")
     ui:Row{ label = "Vault", hint = VaultSummary(vaults),
             chips = { { "Open vault", "doors vault open", confirm = "Can't close it again. Sure?" } } }
+    ui:Note("Guards open locked doors anyway, as in the game. A keycard or hack used once may not open a relocked door again.")
     ui:Note("A vault cannot be closed again once it is open: the game has no way to close it.")
 end }
 
@@ -4045,22 +4550,307 @@ end
 Watch("LEFT_MOUSE_BUTTON")
 Watch("ESCAPE")
 
--- The game's per-frame event of your controller drives the menu (clicks, search box, numbers),
--- and the game clearing the screen (loading, death, win screen) closes it first. Placed the first
--- time the menu opens, not at startup (see truckmoney's hooks).
+local HookEspNpcs                                   -- (below, in the ESP section)
+
+-- The game's per-frame event of your controller drives the menu (clicks, search box, numbers)
+-- and the ESP, and the game clearing the screen (loading, death, win screen) closes the menu
+-- first and lets the ESP know its overlay is gone. Placed the first time the menu opens or the
+-- ESP turns on, not at startup (see truckmoney's hooks). The ESP's first error is shown once.
 local function HookMenu()
     local tick = Core.Hook(Gui.TickEvent, function(Context)
+        local pc = Context:get()
         local m = State.menu
-        if m then m:Tick(Context:get()) end
+        if m then m:Tick(pc) end
+        if State.notarget and State.notarget.count > 0 then
+            if not State.npcHooked and os.clock() >= (State.npcHookTry or 0) then
+                State.npcHookTry = os.clock() + 2                  -- the NPC hooks, once NPCs are loaded
+                State.npcHooked = HookEspNpcs() or nil
+            end
+            if pc:IsLocalController() then pcall(NotargetFrame, pc) end
+        end
+        local e = State.esp
+        if e then
+            local ok, err = pcall(e.Tick, e, pc)
+            if not ok and not State.espError then
+                State.espError = true
+                Print("ESP failed (shown once): " .. tostring(err))
+            end
+        end
     end)
     State.menuRemovalHooked = Core.Hook(Gui.RemoveAllEvent, function()
         local m = State.menu
         if m then m:Removed() end
+        local e = State.esp
+        if e then e:Removed() end
     end) or nil
     State.menuHooked = tick or nil
     return tick
 end
 if State.menuHooked then HookMenu() end      -- after reloadconfig: point the hook at this code
+
+-- notarget's per-frame work runs in the same hook
+EnsureFrameHooks = function()
+    if not State.menuHooked then HookWhenLoaded(HookMenu) end
+end
+
+--------------------------------------------------------------------------------------------------
+-- esp: guards, police, civilians and other players marked on your screen, also through walls
+--
+--    esp            turn it on or off (a key for it: bind f2 esp)
+--    esp on|off
+--
+-- What it shows is set in the menu (opengui > ESP) and saved in settings.lua (its part "esp");
+-- the defaults are V.Esp at the top. Scripts\esp.lua draws it. It is only on your own screen,
+-- nothing is sent to anyone, and it works the same as a guest.
+--------------------------------------------------------------------------------------------------
+local EspKit = Core.Data("esp")
+local ESP_GROUPS = {
+    { id = "guard", name = "Guards", warn = "alert or searching" },
+    { id = "police", name = "Police", note = "Every police type: regular, helmet, SWAT, shield, blinding shield, juggernaut." },
+    { id = "special", name = "Police specials", note = "The interceptor (lays traps) and the powerbox defuser." },
+    { id = "camera", name = "Cameras", warn = "spotting someone", camera = true,
+      note = "Security cameras, marked at their head. A blinded, EMP'd or watched camera says so; a broken one drops off." },
+    { id = "civilian", name = "Civilians", warn = "a hostage or scared" },
+    { id = "player", name = "Other players", warn = "downed" },
+}
+local ESP_NPC_TICK = "/Game/BP/NPC/NPCBase.NPCBase_C:ReceiveTick"
+local ESP_NPC_DIE = "/Game/BP/NPC/NPCBase.NPCBase_C:Die"
+local ESP_CAMERA_TICK = "/Game/BP/Camera/CameraBP.CameraBP_C:ReceiveTick"
+
+-- A setting's default: V.Esp.guard.Color for "guardColor", V.Esp.glow for "glow".
+local function EspDefault(key)
+    for _, g in ipairs(ESP_GROUPS) do
+        local rest = key:sub(#g.id + 1)
+        if key:sub(1, #g.id) == g.id and rest:match("^%u") then return (V.Esp[g.id] or {})[rest] end
+    end
+    return V.Esp[key]
+end
+
+-- A setting: yours (settings.lua) when it is of the right kind, else the default.
+local function EspValue(key)
+    local default, saved = EspDefault(key), Saved.esp[key]
+    if saved ~= nil and type(saved) == type(default) then return saved end
+    return default
+end
+
+-- What esp.lua draws with: colours as the engine's linear colours, the fill as a fraction.
+local function EspConf()
+    local function color(key) return ColorOf(EspValue(key)) or { 1, 1, 1, 1 } end
+    local function yes(key) return EspValue(key) == true end
+    local conf = { on = yes("on"), groups = {} }
+    for _, g in ipairs(ESP_GROUPS) do
+        local id = g.id
+        conf.groups[id] = {
+            on = yes(id .. "On"), color = color(id .. "Color"), box = EspValue(id .. "Box"), fill = yes(id .. "Fill"),
+            name = yes(id .. "Name"), distance = yes(id .. "Distance"), health = yes(id .. "Health"), head = yes(id .. "Head"),
+            line = EspValue(id .. "Line"), warn = g.warn ~= nil and yes(id .. "Warn"), warnColor = color(id .. "WarnColor"),
+            range = EspValue(id .. "Range"), sil = yes(id .. "Sil"), silSlot = EspValue(id .. "SilColor") == 2 and 2 or 1,
+        }
+    end
+    conf.thickness, conf.textSize = EspValue("thickness"), EspValue("textSize")
+    conf.fillOpacity = EspValue("fillOpacity") / 100
+    conf.visible, conf.maxTargets = EspValue("visible"), EspValue("maxTargets")
+    -- the effect is in use while any shown group has its silhouette on
+    conf.glow = false
+    for _, g in pairs(conf.groups) do conf.glow = conf.glow or (g.on and g.sil) end
+    conf.glowEnemy, conf.glowTeam = color("glowEnemy"), color("glowTeam")
+    conf.glowWidth, conf.glowBright, conf.glowStyle = EspValue("glowWidth"), EspValue("glowBright"), EspValue("glowStyle")
+    return conf
+end
+
+-- The NPCs' own per-frame event and their death: placed once the NPC Blueprint is loaded (the
+-- ESP asks again now and then until it is). Every guard, police type and civilian runs them.
+HookEspNpcs = function()
+    local ok = Core.Hook(ESP_NPC_TICK, function(Context)
+        local e = State.esp
+        local hiding = State.notarget and State.notarget.count > 0
+        if (e and e.on) or hiding then
+            local npc = Context:get()
+            if e and e.on then e:NpcTick(npc) end
+            if hiding then NotargetNpc(npc) end
+        end
+    end)
+    if ok then
+        Core.Hook(ESP_NPC_DIE, function(Context)
+            local e = State.esp
+            if e then e:NpcDied(Context:get()) end
+        end)
+    end
+    return ok == true
+end
+if State.npcHooked then HookEspNpcs() end      -- after reloadconfig: point the hooks at this code
+
+-- The security cameras' own per-frame event (only loaded in maps that have cameras).
+local function HookEspCameras()
+    local ok = Core.Hook(ESP_CAMERA_TICK, function(Context)
+        local e = State.esp
+        if e and e.on then e:CameraTick(Context:get()) end
+    end)
+    return ok == true
+end
+
+-- The ESP, made the first time it is turned on (or at load when it was left on).
+local function EnsureEsp()
+    if not State.esp then
+        State.esp = EspKit.New{ kit = Gui, hookNpcs = HookEspNpcs, hookCameras = HookEspCameras, allOf = AllOf, say = Print }
+    end
+    State.esp:SetConf(EspConf())
+    if EspValue("on") and not State.menuHooked then HookWhenLoaded(HookMenu) end
+end
+
+-- Save ESP settings ({ key = value }, LOOK_DEFAULT = back to the default) and use them at once.
+local function ApplyEsp(changes, menu)
+    for k, v in pairs(changes) do
+        if v == LOOK_DEFAULT then Saved.esp[k] = nil else Saved.esp[k] = v end
+        if menu then menu:ResetInput("esp " .. k) end
+    end
+    local saved = SaveSettings()
+    EnsureEsp()
+    if not saved then return { "Could not write settings.lua (the change is used until the game closes)" } end
+    return nil
+end
+
+-- The ESP of the config from before a reloadconfig: its overlay off the screen, the game's own
+-- outline back; this config makes its own.
+if State.esp then
+    local old = State.esp
+    State.esp = nil
+    pcall(function() old:Destroy(LocalPlayerController()) end)
+end
+if EspValue("on") then EnsureEsp() end
+
+Core.Command("esp", function(FullCommand, Parameters, Ar)
+    local word = Parameters and Parameters[1] and Parameters[1]:lower() or ""
+    if word ~= "" and word ~= "on" and word ~= "off" then Say(Ar, "Usage: esp   |   esp on   |   esp off") return true end
+    local on = word == "on" or (word == "" and not EspValue("on"))
+    local problem = ApplyEsp({ on = on })
+    Say(Ar, (on and "ESP on (opengui > ESP to choose what it shows)" or "ESP off") .. (problem and (". " .. problem[1]) or ""))
+    return true
+end)
+
+-- The ESP tab: rows that change one setting at once.
+local function EspSwitch(ui, menu, key, label, info)
+    local on = EspValue(key) == true
+    ui:Row{ label = label, info = info, hint = on and "ON" or "OFF",
+            chips = { { "On", function() return ApplyEsp({ [key] = true }, menu) end },
+                      { "Off", function() return ApplyEsp({ [key] = false }, menu) end } } }
+end
+
+local function EspChoice(ui, menu, key, label, options, info)
+    local now, chips, shown = EspValue(key), {}, ""
+    for _, o in ipairs(options) do
+        if o[2] == now then shown = o[1] end
+        chips[#chips + 1] = { o[1], function() return ApplyEsp({ [key] = o[2] }, menu) end }
+    end
+    ui:Row{ label = label, info = info, chips = chips, hint = shown }
+end
+
+local function EspNumber(ui, menu, key, label, low, high, step)
+    local now = EspValue(key)
+    local function set(v) return ApplyEsp({ [key] = math.max(low, math.min(high, math.floor(v + 0.5))) }, menu) end
+    ui:Row{ label = label, input = { key = "esp " .. key, default = tostring(now), width = 70 },
+            info = string.format("%d to %d", low, high),
+            chips = { { "-", function() return set(now - step) end }, { "+", function() return set(now + step) end },
+                      { "Set", function(inputs)
+                          local v = tonumber(inputs["esp " .. key])
+                          if not v then return { label .. ": '" .. tostring(inputs["esp " .. key]) .. "' is not a number" } end
+                          return set(v)
+                      end },
+                      { "Default", function() return ApplyEsp({ [key] = LOOK_DEFAULT }, menu) end } } }
+end
+
+local function EspColor(ui, menu, key, label, info)
+    local now = EspValue(key)
+    ui:Row{ label = label, info = info, swatch = ColorOf(now), input = { key = "esp " .. key, default = now, width = 100 },
+            chips = { { "Set", function(inputs)
+                          local typed = inputs["esp " .. key] or ""
+                          local hex = typed:match("^%s*#?(%x%x%x%x%x%x)%s*$")
+                          if not hex then return { label .. ": '" .. typed .. "' is not a colour like #ff3b30" } end
+                          return ApplyEsp({ [key] = "#" .. hex:lower() }, menu)
+                      end },
+                      { "Default", function() return ApplyEsp({ [key] = LOOK_DEFAULT }, menu) end } } }
+end
+
+local ESP_TAB = { name = "ESP", still = true, build = function(ui, menu)
+    local on = EspValue("on") == true
+    ui:Header("ESP")
+    ui:Row{ label = "ESP", hint = on and "ON" or "OFF",
+            info = "guards, police and players marked through walls; a key for it: bind f2 esp",
+            chips = { { on and "Turn off" or "Turn on", function() return ApplyEsp({ on = not on }, menu) end },
+                      { "Reset ESP", function()
+                          for k in pairs(Saved.esp) do Saved.esp[k] = nil end
+                          for k in pairs(menu.inputs) do
+                              if k:sub(1, 4) == "esp " then menu:ResetInput(k) end   -- the boxes show the defaults
+                          end
+                          ApplyEsp({}, menu)
+                          return { "The ESP settings are back to the defaults" }
+                      end, confirm = "Back to the defaults?" } } }
+    if on and State.esp then
+        ui:Note(string.format("Showing %d now. Open a group below to change it; every change is used and saved at once.",
+            State.esp.shown or 0))
+    end
+    for _, g in ipairs(ESP_GROUPS) do
+        local id = g.id
+        ui:Header(g.name .. (EspValue(id .. "On") and "" or "  (off)"), "esp " .. id)
+        if g.note then ui:Note(g.note) end
+        EspSwitch(ui, menu, id .. "On", "Show them")
+        local box, sil = EspValue(id .. "Box"), EspValue(id .. "Sil") == true
+        local boxOn = box ~= "off"
+        local function keepBox() return boxOn and box or "box" end
+        ui:Row{ label = "ESP type", info = "a box around them, their silhouette through walls, or both",
+                hint = (sil and boxOn and "Both") or (sil and "Silhouette") or (boxOn and "Box") or "Labels only",
+                chips = { { "Box", function() return ApplyEsp({ [id .. "Sil"] = false, [id .. "Box"] = keepBox() }, menu) end },
+                          { "Silhouette", function() return ApplyEsp({ [id .. "Sil"] = true, [id .. "Box"] = "off" }, menu) end },
+                          { "Both", function() return ApplyEsp({ [id .. "Sil"] = true, [id .. "Box"] = keepBox() }, menu) end } } }
+        local slot = EspValue(id .. "SilColor") == 2 and 2 or 1
+        ui:Row{ label = "Silhouette colour", swatch = ColorOf(EspValue(slot == 2 and "glowTeam" or "glowEnemy")),
+                info = "set the two colours under Silhouettes", hint = slot == 2 and "Second" or "First",
+                chips = { { "First", function() return ApplyEsp({ [id .. "SilColor"] = 1 }, menu) end },
+                          { "Second", function() return ApplyEsp({ [id .. "SilColor"] = 2 }, menu) end } } }
+        EspChoice(ui, menu, id .. "Box", "Box", { { "Box", "box" }, { "Corners", "corners" }, { "No box", "off" } })
+        EspColor(ui, menu, id .. "Color", "Colour", "the box, names and lines")
+        EspSwitch(ui, menu, id .. "Fill", "Fill the box", "how solid: Look > Fill")
+        EspSwitch(ui, menu, id .. "Name", "Name")
+        EspSwitch(ui, menu, id .. "Distance", "Distance")
+        if not g.camera then
+            EspSwitch(ui, menu, id .. "Health", "Health bar")
+            EspSwitch(ui, menu, id .. "Head", "Head dot")
+        end
+        EspChoice(ui, menu, id .. "Line", "Line from the screen",
+            { { "Off", "off" }, { "Bottom", "bottom" }, { "Middle", "middle" }, { "Top", "top" } })
+        if g.warn then
+            EspSwitch(ui, menu, id .. "Warn", "Warning colour", "when " .. g.warn)
+            EspColor(ui, menu, id .. "WarnColor", "Warning colour is")
+        end
+        EspNumber(ui, menu, id .. "Range", "Range (m)", 10, 1000, 25)
+    end
+    ui:Header("Look", "esp look")
+    EspNumber(ui, menu, "thickness", "Line thickness", 1, 6, 1)
+    EspNumber(ui, menu, "textSize", "Text size", 8, 24, 1)
+    EspNumber(ui, menu, "fillOpacity", "Fill: how solid (%)", 5, 90, 5)
+    EspNumber(ui, menu, "maxTargets", "Most targets at once", 5, 100, 5)
+    EspChoice(ui, menu, "visible", "Targets you can see directly",
+        { { "Show", "show" }, { "Dim", "dim" }, { "Hide", "hide" } }, "dim or hide the ones that are not behind a wall")
+    ui:Header("Silhouettes through walls", "esp glow")
+    ui:Note("Turn a group's silhouette on with its ESP type (Silhouette or Both).")
+    EspColor(ui, menu, "glowEnemy", "First colour")
+    EspColor(ui, menu, "glowTeam", "Second colour")
+    local width, style = EspValue("glowWidth"), EspValue("glowStyle")
+    ui:Row{ label = "Style", info = "an outline around the body, or filled: a thick band inside it",
+            hint = style == "band" and "Filled" or "Outline",
+            chips = { { "Outline", function() return ApplyEsp({ glowStyle = "outline", glowWidth = width > 8 and 2 or width }, menu) end },
+                      { "Filled", function() return ApplyEsp({ glowStyle = "band", glowWidth = math.max(width, 20) }, menu) end } } }
+    EspNumber(ui, menu, "glowWidth", "Thickness", 1, 40, 1)
+    EspNumber(ui, menu, "glowBright", "Brightness", 1, 10, 1)
+    ui:Note("Silhouettes are the game's own outline effect (the one it uses when a guard spots you), so there are two " ..
+        "colours, picked per group. While any are on, the game's own outlines take them too, and they are only in heist maps. " ..
+        "Filled looks solid on people further away; up close it is a thick edge.")
+    ui:Note("Everything here is only on your screen and is saved in settings.lua.")
+end }
+-- the ESP tab after Doors
+for i, tab in ipairs(MenuTabs) do
+    if tab.name == "Doors" then table.insert(MenuTabs, i + 1, ESP_TAB) break end
+end
 
 -- Open the menu (opts: tab = a tab's name, code = a Code tab part, status = lines to show), or
 -- close it when it is open and nothing else is asked for.
