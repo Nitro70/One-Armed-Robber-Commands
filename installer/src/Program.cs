@@ -52,7 +52,12 @@ namespace OARCommandsInstaller
                 string win64 = GameLocator.ToWin64(game ?? GameLocator.FindGameFolder());
                 if (win64 == null) throw new InvalidOperationException("One-armed robber was not found.");
                 if (action == "uninstall") ModInstaller.Uninstall(win64, Log);
-                else ModInstaller.Install(win64, Log);
+                else
+                {
+                    ModInstaller.RefuseWhileRunning();          // before downloading anything
+                    using (Stream payload = Payload.Open(Payload.Fetch(Log)))
+                        ModInstaller.Install(win64, Log, payload);
+                }
             }
             catch (Exception ex)
             {

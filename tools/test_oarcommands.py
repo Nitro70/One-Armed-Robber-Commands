@@ -1258,6 +1258,11 @@ def main():
         function Loot(address, value, parent, physicsOn)
             local l = Thing(address, { Value = value })
             function l:GetAttachParentActor() return parent or Invalid end
+            function l:K2_DetachFromActor(a, b, c)
+                assert(a == 1 and b == 1 and c == 1, "keep where it is")
+                Taken[#Taken + 1] = address .. ":detached"
+                parent = nil
+            end
             local root = { Physics = physicsOn or false }
             function root:IsSimulatingPhysics(bone) assert(bone == "None"); return self.Physics end
             function root:SetMobility(m) assert(m == 2); self.Movable = true end
@@ -1296,7 +1301,10 @@ def main():
             for i = 1, n do list[i] = Loot(first + i, 100) end
             return list
         end
+        DUFFEL = "/Game/BP/Items/Duffelbag.Duffelbag_C"
+        Loaded[DUFFEL] = true
         Bag = Thing(659)
+        function Bag:IsA(cls) return cls.Path == DUFFEL end
         Objects.Money_base_C = { Loot(650, 1000), Loot(651, 2000), Loot(652, 4000), Loot(653, 8000, Bag), Loot(654, 16000) }
         Friend.HoldingActor = Objects.Money_base_C[2]
         Overlapping[652] = true
@@ -1323,13 +1331,26 @@ def main():
     ok &= check("a piece that already has its physics on keeps it and is still picked up and let go",
                 lua.eval("#Moves == 1 and Moves[1].falls and #Taken == 2"))
     lua.execute("""
+        Moves, Overlapping, Taken = {}, {}, {}
+        Crate = Thing(658)                                 -- a shipping container: its loot is a part of it
+        function Crate:IsA(cls) return false end
+        Opened = Loot(655, 3000, Crate)
+        Objects.Money_base_C = { Opened, Loot(656, 500, Bag) }
+        Log = {}
+        Console("bringloot")
+    """)
+    ok &= check("bringloot again later finds new loot, also loot still sitting in a container (taken out of it first, "
+                "as picking it up does); loot in a bag stays",
+                lua.eval("#Moves == 1 and Moves[1].who == 655 and Taken[1] == '655:detached' and Taken[2] == '655:picked up'")
+                and any("Moving 1 piece of loot worth 3000" in m for m in values(g.Log)))
+    lua.execute("""
         Moves, Overlapping = {}, { [650] = true, [654] = true }
         Objects.Money_base_C = { Loot(650, 1000), Loot(651, 2000), Loot(652, 4000), Loot(653, 8000, Bag), Loot(654, 16000) }
         Friend.HoldingActor = Objects.Money_base_C[2]
         Overlapping[652] = true
     """)
     lua.execute('Log = {}; Console("bringloot")')
-    ok &= check("bringloot with nothing loose says so", any("No loose loot to move" in m for m in values(g.Log)))
+    ok &= check("bringloot with nothing loose says so", any("No loot to move" in m for m in values(g.Log)))
     lua.execute("""
         Moves, Overlapping = {}, {}
         Objects.Money_base_C = ManyLoot(250, 3000)
@@ -1715,6 +1736,101 @@ def main():
     ok &= check("guest: guards kill goes to the host with your camera (the guard YOU look at)",
                 g.Sent[1].endswith(" guards kill @0,0,0,10.0,20.0") and any("Asked the host" in m for m in values(g.Log)))
     lua.execute('HostReply("[OAR host] " .. LastSentId() .. " ok Killed the guard"); RunDelays(); QueueDelays = false; Authority = true')
+    # --- civilians: tie up / kill / remove (one or all)
+    lua.execute("""
+        CIV = "/Game/BP/NPC/Civilian_NPC.Civilian_NPC_C"
+        TIE = "BndEvt__Civilian_NPC_InteractComponent_K2Node_ComponentBoundEvent_4_Interact__DelegateSignature"
+        Loaded[CIV] = true
+        CivCalls = {}
+        -- a civilian as the game has it: its own tie up event (a player's E on the host), and the
+        -- NPCs' TakeDamage (10 health); game = false: a civilian without the event
+        function Civ(address, fields, x, game)
+            local c = Thing(address, fields)
+            c["Dead?"] = c["Dead?"] or false
+            c["TiedUp?"] = c["TiedUp?"] or false
+            c["Scared?"] = c["Scared?"] or false
+            c.Health = c.Health or 10
+            c.CharacterMovement = { MaxWalkSpeed = 500 }
+            c.CapsuleComponent = Thing(address + 1)
+            function c:IsA(cls) return cls.Path == CIV end
+            function c:K2_GetActorLocation() return { X = x or 0, Y = 0, Z = 0 } end
+            c.Mesh = { K2_GetComponentLocation = function() return { X = (x or 0) + (c.Fell or 0), Y = 0, Z = 0 } end }
+            if game ~= false then
+                c[TIE] = function(self, player, hit)
+                    assert(player ~= nil and hit ~= nil, "UE4SS cannot pass nil")
+                    CivCalls[#CivCalls + 1] = address .. ":tie"
+                    if self["Dead?"] then return end
+                    self["Scared?"], self["TiedUp?"] = true, true
+                    self.CharacterMovement.MaxWalkSpeed = 0
+                end
+            end
+            function c:TiedUpName() CivCalls[#CivCalls + 1] = address .. ":name Tied up" end
+            function c:TakeDamage(damage, player)
+                CivCalls[#CivCalls + 1] = address .. ":damage " .. damage
+                self.Killer = player
+                self.Health = self.Health - damage
+                if self.Health <= 0 then self["Dead?"] = true end
+            end
+            function c:K2_DestroyActor() CivCalls[#CivCalls + 1] = address .. ":destroyed" end
+            return c
+        end
+        Shopper = Civ(950, {}, 0)
+        Panicky = Civ(951, { ["Scared?"] = true }, 1000)
+        Fallen = Civ(952, { ["Dead?"] = true, Fell = 300 }, 3000)
+        Objects.Civilian_NPC_C = { Shopper, Panicky, Fallen }
+        Log = {}
+    """)
+    lua.execute('Console("civilians")')
+    ok &= check("civilians shows how many are here, tied up, scared and down",
+                any("Civilians: 2 here (0 tied up, 1 scared), 1 down" in m for m in values(g.Log)))
+    lua.execute('LookTarget = Shopper; Log = {}; CivCalls = {}; Console("civilians tie")')
+    ok &= check("civilians tie: the civilian you look at is tied up with its own tie up event (a player's E)",
+                lua.eval("Shopper['TiedUp?'] and Shopper.CharacterMovement.MaxWalkSpeed == 0 and CivCalls[1] == '950:tie'")
+                and any("Tied up the civilian" in m for m in values(g.Log)))
+    lua.execute('Log = {}; CivCalls = {}; Console("civilians tie")')
+    ok &= check("civilians tie on one already tied up says so and does nothing",
+                lua.eval("#CivCalls == 0") and any("already tied up" in m for m in values(g.Log)))
+    lua.execute('LookTarget = Panicky; Log = {}; CivCalls = {}; Console("civilians kill")')
+    ok &= check("civilians kill: as if shot by you (all its health), which the game counts as a civilian killed",
+                lua.eval("Panicky['Dead?'] and Panicky.Killer == PC.Pawn and CivCalls[1] == '951:damage 10'")
+                and any("Killed the civilian (counted as civilians killed" in m for m in values(g.Log)))
+    lua.execute('Log = {}; Console("civilians kill")')
+    ok &= check("civilians kill on one that is down already says so", any("already down" in m for m in values(g.Log)))
+    lua.execute('LookTarget = Wall; LookLocation = { X = 3290, Y = 0, Z = 0 }; Log = {}; CivCalls = {}; Console("civilians remove")')
+    ok &= check("civilians remove: looking at the floor where a body fell removes it",
+                lua.eval("CivCalls[1] == '952:destroyed'") and any("Removed the body" in m for m in values(g.Log)))
+    lua.execute('LookLocation = { X = 9000, Y = 0, Z = 0 }; Log = {}; Console("civilians tie")')
+    ok &= check("civilians tie looking at no civilian says so", any("Not looking at a civilian" in m for m in values(g.Log)))
+    lua.execute("""
+        LookTarget = nil; LookLocation = nil
+        Teller = Civ(953, {}, 500)
+        Usher = Civ(954, {}, 600, false)              -- no tie up event: done by hand
+        Objects.Civilian_NPC_C = { Shopper, Teller, Usher, Fallen }
+        Dirty = {}; Log = {}; CivCalls = {}
+        Console("civilians tie all")
+    """)
+    ok &= check("civilians tie all: every free one tied up (by hand where the game's event is missing), the tied and the dead skipped",
+                lua.eval("Teller['TiedUp?'] and Usher['TiedUp?'] and Usher['Scared?'] and Usher.CharacterMovement.MaxWalkSpeed == 0")
+                and "953:tie" in values(g.CivCalls) and "954:name Tied up" in values(g.CivCalls)
+                and "954:TiedUp?" in values(g.Dirty) and not any(c.startswith("950:") or c.startswith("952:") for c in values(g.CivCalls))
+                and any("Tied up 2 civilians" in m for m in values(g.Log)))
+    lua.execute('Log = {}; CivCalls = {}; Console("civilians remove all")')
+    ok &= check("civilians remove all: every civilian and body",
+                len([c for c in values(g.CivCalls) if c.endswith(":destroyed")]) == 4
+                and any("Removed 3 civilians and 1 body" in m for m in values(g.Log)))
+    lua.execute('Log = {}; Console("civilians free")')
+    ok &= check("civilians with a wrong word shows the usage", any("Usage: civilians" in m for m in values(g.Log)))
+    lua.execute('OARCommands.State.share.silentUntil = 0; Authority = false; Sent = {}; QueueDelays = true; Log = {}; Console("civilians tie")')
+    ok &= check("guest: civilians tie goes to the host with your camera (the civilian YOU look at)",
+                g.Sent[1].endswith(" civilians tie @0,0,0,10.0,20.0") and any("Asked the host" in m for m in values(g.Log)))
+    lua.execute('Messages = {}; HostReply("[OAR host] " .. LastSentId() .. " ok Tied up the civilian"); RunDelays()')
+    ok &= check("guest: the host's answer is shown (what the host's mod did)",
+                any("the host: Tied up the civilian" in m for m in values(g.Messages)))
+    lua.execute('OARCommands.State.share.silentUntil = 0; Sent = {}; Log = {}; Console("civilians remove all")')
+    lua.execute('Messages = {}; HostReply("[OAR host] " .. LastSentId() .. " ok civilians remove all"); RunDelays(); QueueDelays = false; Authority = true')
+    ok &= check("guest: a host whose OAR Commands is too old for a command (its engine got the line) is reported, not taken as done",
+                any("does not have 'civilians' (an older version), so nothing changed" in m for m in values(g.Messages)))
+    lua.execute('Objects.Civilian_NPC_C = nil')
     lua.execute('Objects.NPC_Guard_C = nil; Objects.GuardPhone_C = nil')
     lua.execute('Console("commandsharing 0"); LookTarget = nil; Objects.DoorBP_C = nil; Objects.VaultDoor_C = nil')
     lua.execute('Objects = {}; Truck = nil; Button = nil; Characters = nil; Pawn = MakePawn(500); PC.Pawn = Pawn; Pawn.Controller = PC')
@@ -2815,21 +2931,23 @@ end)
         SetType("esp player", "Other players", "Silhouette")
         NpcTick(Guard); NpcTick(Swat); Frame()
     """)
-    ok &= check("silhouettes: a copy of the game's outline material in the ESP's two colours takes the effect's place",
+    ok &= check("silhouettes: a copy of the game's outline material takes the effect's place, in the ESP's colour; "
+                "the game's own white (phones, keypads, downed teammates) and its thickness stay",
                 lua.eval("Entry.Object == Copy and Copy.Parent == Original and Copy.Params.Color1.R == 1 and Copy.Params.Color1.G < 0.1 "
-                         "and Copy.Params.Color.G > 0.5 and Copy.Params.LineWidth == 2 and Copy.Params.EdgeAngleFalloff == 100"))
-    ok &= check("silhouettes per group: guards and police in the first colour, other players in the second",
+                         "and Copy.Params.Color.R == 1 and Copy.Params.Color.G == 1 and Copy.Params.Color.B == 1 "
+                         "and Copy.Params.LineWidth == 1 and Copy.Params.EdgeAngleFalloff == 100"))
+    ok &= check("silhouettes per group: guards and police in the ESP's colour, other players in the game's white",
                 lua.eval("Guard.Mesh.bRenderCustomDepth and Guard.Mesh.Stencil == 1 and Swat.Mesh.Stencil == 1 "
                          "and Buddy.Mesh.bRenderCustomDepth and Buddy.Mesh.Stencil == 0"))
     ok &= check("ESP type: Both keeps the box, Silhouette has none",
                 lua.eval("CardOf('Guard').vis.edge1 and not CardOf('SWAT').vis.edge1 and not CardOf('SWAT').vis.corner1"))
     lua.execute("""
-        Open(); Expand("esp guard", "Guards"); Click(ChipIn("esp guard", "Silhouette colour", "Second").button); Shut()
+        Open(); Expand("esp guard", "Guards"); Click(ChipIn("esp guard", "Silhouette colour", "White").button); Shut()
         NpcTick(Guard); NpcTick(Swat); Frame()
     """)
-    ok &= check("a group's silhouette can take the second colour (at once)", lua.eval("Guard.Mesh.Stencil == 0 and Swat.Mesh.Stencil == 1"))
+    ok &= check("a group's silhouette can take the game's white instead (at once)", lua.eval("Guard.Mesh.Stencil == 0 and Swat.Mesh.Stencil == 1"))
     lua.execute("""
-        Open(); Expand("esp guard", "Guards"); Click(ChipIn("esp guard", "Silhouette colour", "First").button); Shut()
+        Open(); Expand("esp guard", "Guards"); Click(ChipIn("esp guard", "Silhouette colour", "ESP colour").button); Shut()
         Open(); Expand("esp glow", "Silhouettes through walls"); Click(ChipIn("esp glow", "Style", "Filled").button); Shut()
         NpcTick(Guard); Frame()
     """)
@@ -2999,6 +3117,7 @@ end)
         World.GameState = { PlayerArray = MakeArray({ MyState }) }
         World.IsValid = function() return true end
         Authority = true; Log = {}
+        OARCommands.Exports.Values.NotargetCheckSeconds = 0       -- every NPC every frame (spreading is tested below)
         Console("notarget")
         Frame()
     """)
@@ -3044,7 +3163,7 @@ end)
         for _, c in ipairs({ Facing, Away, Far }) do Hooks[NPC_TICK](Param(c)) end
     """)
     ok &= check("notarget: a civilian looking at you sees only up to just short of you (so it never starts to spot you)",
-                abs(lua.eval("Facing.PawnSensing.SightRadius") - ((1000 ** 2 + 64 ** 2) ** 0.5 - 150)) < 0.01
+                abs(lua.eval("Facing.PawnSensing.SightRadius") - ((1000 ** 2 + 64 ** 2) ** 0.5 - 250)) < 0.01
                 and lua.eval("Away.PawnSensing.SightRadius == 2000 and Far.PawnSensing.SightRadius == 2000"))
     lua.execute("""
         local had, open = Menu() ~= nil, Menu() ~= nil and Menu().open
@@ -3063,6 +3182,21 @@ end)
     """)
     ok &= check("notarget: an officer that picked you as its target drops it",
                 lua.eval("Cop.TargetPlayer == Invalid and Cop['Sensing?'] == false"))
+    lua.execute("""
+        OARCommands.Exports.Values.NotargetCheckSeconds = 0.1
+        Counted = Npc(9306, "Civilian_NPC_C", 50000)
+        Asked = 0
+        function Counted:HasAuthority() Asked = Asked + 1; return true end
+        local clock = os.clock
+        local now = 1000
+        os.clock = function() return now end
+        Frame(); now = now + 0.01; Frame()        -- 100 frames a second: each NPC every 10th frame
+        for _ = 1, 120 do Hooks[NPC_TICK](Param(Counted)) end
+        os.clock = clock
+        OARCommands.Exports.Values.NotargetCheckSeconds = 0; Frame()
+    """)
+    ok &= check("notarget: NPCs are looked at in turns spread over the frames, not all of them every frame",
+                lua.eval("Asked == 12"))
     lua.execute('Log = {}; Console("notarget"); Frame()')
     ok &= check("notarget again: off, and your character is as it was (and every civilian's sight range)",
                 any("No target is off" in m for m in values(g.Log))

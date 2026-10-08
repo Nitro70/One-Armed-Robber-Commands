@@ -1,4 +1,4 @@
-"""Scan the release exe (and every file bundled in it) for personal or build-machine strings.
+"""Scan the release exes (and every file bundled in the payload) for personal or build-machine strings.
 
 Run before publishing. Prints each hit with the surrounding bytes; exit code 1 if anything is found.
 """
@@ -8,7 +8,8 @@ import sys
 import zipfile
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-EXE = os.path.join(REPO, "dist", "OAR-Commands-Installer.exe")
+EXES = [os.path.join(REPO, "dist", "OAR-Commands-Offline-Installer.exe"),
+        os.path.join(REPO, "dist", "OAR-Commands-Online-Installer.exe")]
 PAYLOAD = os.path.join(REPO, "build", "payload.zip")
 B = chr(92)
 
@@ -44,7 +45,9 @@ def hits(data, label):
 
 
 def main():
-    total = hits(open(EXE, "rb").read(), os.path.basename(EXE))
+    total = 0
+    for exe in EXES:
+        total += hits(open(exe, "rb").read(), os.path.basename(exe))
     with zipfile.ZipFile(PAYLOAD) as z:
         for name in z.namelist():
             total += hits(z.read(name), "payload/" + name)

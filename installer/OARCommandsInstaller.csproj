@@ -6,9 +6,13 @@
     <TargetFramework>net48</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
-    <AssemblyName>OAR-Commands-Installer</AssemblyName>
+    <!-- Two editions from the same code: Offline (the mod's files inside the exe, the default) and
+         Online (dotnet build -p:Edition=Online: downloads the latest release's files from GitHub at
+         every Install / Update). -->
+    <Edition Condition="'$(Edition)' == ''">Offline</Edition>
+    <AssemblyName>OAR-Commands-$(Edition)-Installer</AssemblyName>
     <RootNamespace>OARCommandsInstaller</RootNamespace>
-    <Version>1.6.0</Version>
+    <Version>1.6.1</Version>
     <Product>OAR Commands</Product>
     <Company>OAR Commands contributors</Company>
     <Copyright>MIT License, OAR Commands contributors</Copyright>
@@ -26,6 +30,12 @@
     <GenerateSupportedRuntime>false</GenerateSupportedRuntime>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <!-- Each edition has its own intermediate folder, so building one never mixes in the other. -->
+    <IntermediateOutputPath>obj\$(Configuration)-$(Edition)\</IntermediateOutputPath>
+    <DefineConstants Condition="'$(Edition)' == 'Online'">$(DefineConstants);ONLINE</DefineConstants>
+  </PropertyGroup>
+
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <OutputPath>..\dist\</OutputPath>
   </PropertyGroup>
@@ -38,14 +48,16 @@
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Web.Extensions" Condition="'$(Edition)' == 'Online'" />
   </ItemGroup>
 
-  <!-- Built by tools/make_payload.py: UE4SS runtime files + this project's mod files. -->
-  <ItemGroup>
+  <!-- Built by tools/make_payload.py: UE4SS runtime files + this project's mod files. The online
+       edition carries none: it downloads the same zip from the latest GitHub release. -->
+  <ItemGroup Condition="'$(Edition)' != 'Online'">
     <EmbeddedResource Include="..\build\payload.zip" LogicalName="payload.zip" />
   </ItemGroup>
 
-  <Target Name="CheckPayload" BeforeTargets="BeforeBuild">
+  <Target Name="CheckPayload" BeforeTargets="BeforeBuild" Condition="'$(Edition)' != 'Online'">
     <Error Condition="!Exists('..\build\payload.zip')" Text="build\payload.zip is missing. Run: python tools\make_payload.py" />
   </Target>
 

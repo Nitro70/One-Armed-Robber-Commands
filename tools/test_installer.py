@@ -3,14 +3,18 @@
 Uses the Debug build (build/debug) for install/uninstall scenarios, because the Release build
 refuses to run while the real game is open, and checks that refusal with the Release build.
 """
+import json
 import os
+import pathlib
 import shutil
 import subprocess
 import tempfile
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEBUG_EXE = os.path.join(REPO, "build", "debug", "OAR-Commands-Installer.exe")
-RELEASE_EXE = os.path.join(REPO, "dist", "OAR-Commands-Installer.exe")
+DEBUG_EXE = os.path.join(REPO, "build", "debug", "OAR-Commands-Offline-Installer.exe")
+ONLINE_DEBUG_EXE = os.path.join(REPO, "build", "debug", "OAR-Commands-Online-Installer.exe")
+RELEASE_EXE = os.path.join(REPO, "dist", "OAR-Commands-Offline-Installer.exe")
+RELEASE_ZIP = os.path.join(REPO, "dist", "OAR-Commands-Payload.zip")
 BOM = b"\xef\xbb\xbf"
 
 
@@ -143,7 +147,41 @@ def main():
     code, log = run(DEBUG_EXE, tempfile.mkdtemp(), "install", test_env)
     ok &= check("wrong folder is refused", code == 1 and "not found" in log)
 
-    # 8. the Release build refuses while the game is running (only checkable if it is running)
+    # 8. the online installer: downloads the latest release's zip, checks it, installs the same files
+    def fake_release(tag="v9.9.9", digest=None, with_zip=True):
+        folder = tempfile.mkdtemp()
+        zip_path = os.path.join(folder, "OAR-Commands-Payload.zip")
+        shutil.copyfile(RELEASE_ZIP, zip_path)
+        real = open(RELEASE_ZIP + ".sha256", encoding="ascii").read().split()[0]
+        with open(zip_path + ".sha256", "w", encoding="ascii") as f:
+            f.write((digest or real) + "  OAR-Commands-Payload.zip\n")
+        assets = [{"name": "OAR-Commands-Payload.zip.sha256", "browser_download_url": pathlib.Path(zip_path + ".sha256").as_uri()}]
+        if with_zip:
+            assets.append({"name": "OAR-Commands-Payload.zip", "browser_download_url": pathlib.Path(zip_path).as_uri()})
+        with open(os.path.join(folder, "release.json"), "w", encoding="utf-8") as f:
+            json.dump({"tag_name": tag, "assets": assets}, f)
+        return folder
+
+    root = tempfile.mkdtemp()
+    win64 = fake_game(root)
+    online_env = dict(test_env, OARCOMMANDS_TEST_RELEASE_DIR=fake_release())
+    code, log = run(ONLINE_DEBUG_EXE, root, "install", online_env)
+    config = os.path.join(win64, "Mods", "OARCommands", "config.lua")
+    ok &= check("online installer: downloads the latest release (its tag shown), checks the checksum and installs",
+                code == 0 and "Downloaded v9.9.9" in log and "checksum OK" in log
+                and os.path.isfile(os.path.join(win64, "dwmapi.dll")) and open(config, "rb").read() == shipped)
+    code, log = run(ONLINE_DEBUG_EXE, root, "uninstall", test_env)
+    ok &= check("online installer: uninstall needs no download", code == 0 and sorted(os.listdir(win64)) == ["OAR-Win64-Shipping.exe"])
+    online_env = dict(test_env, OARCOMMANDS_TEST_RELEASE_DIR=fake_release(digest="0" * 64))
+    code, log = run(ONLINE_DEBUG_EXE, root, "install", online_env)
+    ok &= check("online installer: a download that does not match its checksum changes nothing",
+                code == 1 and "did not match its checksum" in log and sorted(os.listdir(win64)) == ["OAR-Win64-Shipping.exe"])
+    online_env = dict(test_env, OARCOMMANDS_TEST_RELEASE_DIR=fake_release(tag="v1.5.0", with_zip=False))
+    code, log = run(ONLINE_DEBUG_EXE, root, "install", online_env)
+    ok &= check("online installer: a release without the files says so and changes nothing",
+                code == 1 and "does not have OAR-Commands-Payload.zip" in log and sorted(os.listdir(win64)) == ["OAR-Win64-Shipping.exe"])
+
+    # 9. the Release build refuses while the game is running (only checkable if it is running)
     running = b"OAR-Win64-Shipping.exe" in subprocess.run(
         ["tasklist", "/FI", "IMAGENAME eq OAR-Win64-Shipping.exe"], capture_output=True).stdout
     if running and os.path.isfile(RELEASE_EXE):

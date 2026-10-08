@@ -359,7 +359,7 @@ function Esp:MarkMeshes(actor, on, stencil)
     pcall(walk, actor, 0)
 end
 
--- Mark (or unmark) a target for its silhouette (slot: the effect's first or second colour). actor
+-- Mark (or unmark) a target for its silhouette (slot 1: the ESP's colour, 2: the game's white). actor
 -- is alive right now. The game turns the mark off itself now and then (a guard that stops
 -- spotting you, a teammate getting up), so it is put back every half second. Unmarked, a downed
 -- teammate keeps the game's own outline.
@@ -431,10 +431,13 @@ function Esp:SetUpOutline()
 end
 
 -- The copy's colours, thickness, brightness and style (copy: as just found, or found again).
--- glowEnemy is the first colour (marked 1 or more), glowTeam the second (marked 0).
+-- glowEnemy is the ESP's colour (marked 1 or more). Marked 0 stays the game's own white, which the
+-- game uses for its phones, keypads, locks and downed teammates (a copy made by an older config
+-- may hold another colour there, so it is set back).
+local GAME_WHITE = { R = 1, G = 1, B = 1, A = 0 }                    -- HighlightMat_Inst's Color
 function Esp:OutlineColours(copy)
     local c = self.conf
-    local key = table.concat(c.glowEnemy, ",") .. table.concat(c.glowTeam, ",") .. c.glowWidth .. c.glowBright .. c.glowStyle
+    local key = table.concat(c.glowEnemy, ",") .. c.glowWidth .. c.glowBright .. c.glowStyle
     if self.outlineSet == key then return end
     if not copy then
         local _, _, _, found = FindOutline()
@@ -445,7 +448,7 @@ function Esp:OutlineColours(copy)
     pcall(function()
         local function color(t) return { R = t[1], G = t[2], B = t[3], A = 0 } end
         copy:SetVectorParameterValue(FName("Color1"), color(c.glowEnemy))       -- marked 1 or more
-        copy:SetVectorParameterValue(FName("Color"), color(c.glowTeam))         -- marked 0
+        copy:SetVectorParameterValue(FName("Color"), GAME_WHITE)                -- marked 0
         copy:SetScalarParameterValue(FName("LineWidth"), c.glowWidth)
         copy:SetScalarParameterValue(FName("OutlineGlowInt"), c.glowBright)
         -- the sign picks the side of the edge: an outline around the body, or a band inside it

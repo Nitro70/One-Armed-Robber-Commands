@@ -9,7 +9,7 @@ using System.Text;
 namespace OARCommandsInstaller
 {
     /// <summary>
-    /// Copies the embedded payload (UE4SS 3.0.1 + OARCommands) into OAR\Binaries\Win64 and removes
+    /// Copies the payload (UE4SS 3.0.1 + OARCommands; see Payload) into OAR\Binaries\Win64 and removes
     /// it again. Only files listed in the install record are ever deleted.
     /// </summary>
     internal static class ModInstaller
@@ -51,7 +51,7 @@ namespace OARCommandsInstaller
             catch (IOException) { return false; }
         }
 
-        internal static void Install(string win64, Action<string> log)
+        internal static void Install(string win64, Action<string> log, Stream payload)
         {
             RefuseWhileRunning();
             var written = new List<string>();
@@ -63,37 +63,33 @@ namespace OARCommandsInstaller
             List<string> oldRecord = File.Exists(Path.Combine(win64, RecordRel))
                 ? File.ReadAllLines(Path.Combine(win64, RecordRel)).Select(l => l.Trim()).Where(l => l.Length > 0).ToList()
                 : new List<string>();
-            using (Stream s = typeof(ModInstaller).Assembly.GetManifestResourceStream("payload.zip"))
+            using (var zip = new ZipArchive(payload, ZipArchiveMode.Read, leaveOpen: true))
             {
-                if (s == null) throw new InvalidOperationException("The installer is damaged: its files are missing.");
-                using (var zip = new ZipArchive(s, ZipArchiveMode.Read))
+                foreach (ZipArchiveEntry entry in zip.Entries)
                 {
-                    foreach (ZipArchiveEntry entry in zip.Entries)
+                    if (entry.FullName.EndsWith("/")) continue;
+                    string rel = entry.FullName.Replace('/', Path.DirectorySeparatorChar);
+                    if (string.Equals(rel, ModsTxtRel, StringComparison.OrdinalIgnoreCase))
                     {
-                        if (entry.FullName.EndsWith("/")) continue;
-                        string rel = entry.FullName.Replace('/', Path.DirectorySeparatorChar);
-                        if (string.Equals(rel, ModsTxtRel, StringComparison.OrdinalIgnoreCase))
-                        {
-                            using (var reader = new StreamReader(entry.Open(), Encoding.UTF8))
-                                payloadModsTxt = reader.ReadToEnd();
-                            continue;
-                        }
-                        if (string.Equals(rel, ConfigRel, StringComparison.OrdinalIgnoreCase))
-                        {
-                            using (var buffer = new MemoryStream())
-                            {
-                                using (Stream src = entry.Open()) src.CopyTo(buffer);
-                                newDefault = buffer.ToArray();
-                            }
-                            continue;
-                        }
-                        string target = InsideFolder(win64, rel);
-                        Directory.CreateDirectory(Path.GetDirectoryName(target));
-                        using (Stream src = entry.Open())
-                        using (var dst = new FileStream(target, FileMode.Create, FileAccess.Write, FileShare.None))
-                            src.CopyTo(dst);
-                        written.Add(rel);
+                        using (var reader = new StreamReader(entry.Open(), Encoding.UTF8))
+                            payloadModsTxt = reader.ReadToEnd();
+                        continue;
                     }
+                    if (string.Equals(rel, ConfigRel, StringComparison.OrdinalIgnoreCase))
+                    {
+                        using (var buffer = new MemoryStream())
+                        {
+                            using (Stream src = entry.Open()) src.CopyTo(buffer);
+                            newDefault = buffer.ToArray();
+                        }
+                        continue;
+                    }
+                    string target = InsideFolder(win64, rel);
+                    Directory.CreateDirectory(Path.GetDirectoryName(target));
+                    using (Stream src = entry.Open())
+                    using (var dst = new FileStream(target, FileMode.Create, FileAccess.Write, FileShare.None))
+                        src.CopyTo(dst);
+                    written.Add(rel);
                 }
             }
             if (newDefault == null) throw new InvalidOperationException("The installer is damaged: config.lua is missing.");
@@ -196,7 +192,7 @@ namespace OARCommandsInstaller
 
         private static byte[] ReadIfExists(string path) => File.Exists(path) ? File.ReadAllBytes(path) : null;
 
-        private static void RefuseWhileRunning()
+        internal static void RefuseWhileRunning()
         {
 #if DEBUG
             // Debug builds only: lets tools/test_installer.py use a fake game folder while the real game runs.

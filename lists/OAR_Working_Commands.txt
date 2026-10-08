@@ -56,6 +56,8 @@ QUICK START
   maxskills / unlockall            every skill at top tier / every cash-bought weapon, mod, tool, armor (mod)
   noclip                           fly through walls: WASD, Space up, Ctrl down, Shift faster; again to land (mod)
   notarget                         guards, cameras and civilians ignore you (only you); again to turn it off (mod)
+  civilians / civilians tie [all]  host: tie up the civilian you look at / every civilian, the game's way (mod)
+  civilians kill / remove [all]    host: kill (a civilian killed) or remove the civilian you look at / all (mod)
   revive                           get back up with full health (mod)
   selectmap museum                 host: pick the heist from the console; selectmap alone lists them (mod)
   forcemap museum                  host: start a map now for everyone, no ready-up or countdown (mod)

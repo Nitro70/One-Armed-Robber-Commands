@@ -2,10 +2,13 @@
 
 Contents: the runtime files from the official UE4SS v3.0.1 release (downloaded once into build/
 and checked against its SHA-256), with this project's files from mod/ laid over the top, plus
-the UE4SS license. The installer embeds the zip, so the released exe needs no download.
+the UE4SS license. The offline installer embeds the zip, so it needs no download; the online
+installer downloads the same zip (dist/OAR-Commands-Payload.zip, a release asset, with its
+.sha256) from the latest GitHub release.
 """
 import hashlib
 import os
+import shutil
 import urllib.request
 import zipfile
 
@@ -16,6 +19,8 @@ UE4SS_URL = "https://github.com/UE4SS-RE/RE-UE4SS/releases/download/v3.0.1/UE4SS
 UE4SS_SHA256 = "4b47d4bceddd2f561a4e395bfa00924ccfc945af576a2d0c613e6537846c57ec"
 UE4SS_ZIP = os.path.join(BUILD, "UE4SS_v3.0.1.zip")
 PAYLOAD = os.path.join(BUILD, "payload.zip")
+DIST = os.path.join(REPO, "dist")
+RELEASE_ZIP = os.path.join(DIST, "OAR-Commands-Payload.zip")
 SKIP = {"README.md", "Changelog.md"}              # docs from the UE4SS zip, not needed in the game folder
 
 
@@ -67,6 +72,15 @@ def main():
     with zipfile.ZipFile(PAYLOAD) as z:
         names = z.namelist()
     print(f"{PAYLOAD}: {len(names)} files, {os.path.getsize(PAYLOAD):,} bytes")
+
+    # The online installer downloads this same zip from the latest GitHub release, with its SHA-256
+    # next to it: both are release assets, so they go to dist with the installers.
+    os.makedirs(DIST, exist_ok=True)
+    shutil.copyfile(PAYLOAD, RELEASE_ZIP)
+    digest = sha256(RELEASE_ZIP)
+    with open(RELEASE_ZIP + ".sha256", "w", encoding="ascii", newline="\n") as f:
+        f.write(f"{digest}  {os.path.basename(RELEASE_ZIP)}\n")
+    print(f"{RELEASE_ZIP} (+ .sha256): {digest}")
 
 
 if __name__ == "__main__":

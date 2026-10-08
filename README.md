@@ -13,7 +13,11 @@ Every command's values and full code sit in one file, **`config.lua`**, which yo
 load again in the running game with `reloadconfig`. **`opengui`** opens an in-game menu with all
 of it on tabs, including a searchable list of everything you can spawn.
 
-**Download `OAR-Commands-Installer.exe` from the [Releases](../../releases) page.**
+**Download an installer from the [Releases](../../releases) page:**
+
+- **`OAR-Commands-Online-Installer.exe`**: downloads the newest version from GitHub every time
+  you click Install / Update, so you keep this one exe and never download an installer again.
+- **`OAR-Commands-Offline-Installer.exe`**: has its version built in and needs no internet.
 
 > Not affiliated with or endorsed by the makers of One-armed robber. This uses
 > [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS), a third-party mod loader that runs inside the
@@ -37,9 +41,10 @@ of it on tabs, including a searchable list of everything you can spawn.
 ## Install
 
 1. Close One-armed robber.
-2. Run `OAR-Commands-Installer.exe`. It finds the game through Steam. If it cannot, click
-   **Browse** and pick the game folder (the one with `OAR.exe`).
-3. Click **Install / Update**. It takes about a second.
+2. Run the installer. It finds the game through Steam. If it cannot, click **Browse** and pick
+   the game folder (the one with `OAR.exe`).
+3. Click **Install / Update**. The offline installer takes about a second; the online one first
+   downloads the newest release (about 6 MB) from GitHub.
 4. Start the game and press **~** to open the console.
 
 To remove everything, run the installer again and click **Uninstall**. It deletes only the files
@@ -49,7 +54,12 @@ have are left alone. Installing again puts the default `config.lua` back.
 Notes:
 
 - The exe needs nothing extra: it is a .NET Framework 4.8 program, which Windows 10 and 11
-  already have. UE4SS and the mod are packed inside it, so it works offline.
+  already have. The offline installer has UE4SS and the mod packed inside it. The online
+  installer downloads the same files (`OAR-Commands-Payload.zip`) from the latest release at
+  every Install / Update and checks them against the release's SHA-256
+  (`OAR-Commands-Payload.zip.sha256`) before it changes anything; Uninstall needs no internet.
+- When you play together, everyone should have the same version: as a guest, the host's copy of
+  the mod runs the world commands. The online installer is the easy way to stay current.
 - It is not code-signed, so Windows SmartScreen may warn. Click **More info**, then **Run anyway**.
 - Some antivirus programs flag UE4SS's `dwmapi.dll`, because it loads code into the game. It is
   the file from the official UE4SS 3.0.1 release (zip SHA-256
@@ -106,6 +116,8 @@ Notes:
 | `guards phones answer` / `remove` | Host: answer every ringing guard phone as a scanner does (no alarm) / take the phones away |
 | `noclip` | Fly through walls: WASD, Space up, Ctrl down, Shift twice as fast; again to land |
 | `notarget` | Guards, cameras and civilians ignore you (only you); again to turn it off |
+| `civilians` / `civilians tie [all]` | Host: tie up the civilian you look at, or every civilian, the game's way |
+| `civilians kill [all]` / `civilians remove [all]` | Host: kill (counts as a civilian killed) or remove the civilian you look at, or all |
 | `revive` | Get back up with full health |
 | `selectmap [heist]` | Host: pick the heist from the console; with no name, list the heists |
 | `forcemap [map]` | Host: start a map now for everyone, with no ready-up and no countdown |
@@ -317,6 +329,20 @@ same command takes you back. Binds also follow you into the debug camera, so a k
 `teleport` moves your character to what your character is aiming at, not to the debug camera, so
 it cannot bring you to where the free camera is.
 
+### civilians
+
+- `civilians` shows how many civilians are here, how many are tied up or scared, and how many
+  are down.
+- `civilians tie` ties up the civilian you are looking at, the way pressing E on one does: they
+  are tied up, stop walking, and never flee, run to a guard or call the police.
+  `civilians tie all` ties up every civilian in the map.
+- `civilians kill` (or `kill all`) kills them as if shot. Each one counts as a civilian killed,
+  so the win screen takes the same penalty off the take as when you shoot one.
+- `civilians remove` (or `remove all`) takes them out of the heist: no body and nothing counted.
+  `remove all` also takes the bodies.
+- As a guest these go to the host (command sharing level 2 or 3), aimed from your own camera.
+  They are also in the menu's Heist tab.
+
 ### notarget
 
 - `notarget` hides you from the guards, the security cameras and civilians; `notarget` again (or
@@ -435,8 +461,10 @@ Otherwise they say that only the host can. The "show" forms (`alarm`, `cops`, `c
   next one comes down and nothing ends up on the roof. Each piece is picked up and let go the game's
   way first, so pieces that only move once a player picked them up fall instead of floating, and
   guests see them move. A very big haul that does not fit at once
-  is reported: type `bringloot` again once the first lot has landed. It leaves alone what a player
-  is holding, what is stuck to a bag, and what is already in the truck. The layout is set in
+  is reported: type `bringloot` again once the first lot has landed. Every time it looks for the
+  loot again, so new loot (from a container you opened, or spawned) comes along on the next
+  click. Loot still sitting in a container is taken out of it first, as picking it up does. It
+  leaves alone what a player is holding, what is in a bag, and what is already in the truck. The layout is set in
   `config.lua` (`BringLootSpacing`, `BringLootMargin`, `BringLootFloorGap`, `BringLootLayerHeight`,
   `BringLootMaxHeight`, `BringLootWaveMs`).
 - `escape` presses the escape button for you, even when not everyone is in the truck or the
@@ -499,7 +527,7 @@ your screen, also through walls. It is only on your own screen and works the sam
   EMP'd, watched or spotting someone), Civilians (off at first) and Other players.
 - **ESP type** per group: **Box** (a box around them), **Silhouette** (their body outlined
   through walls) or **Both**.
-- **Per group**: show or hide, which silhouette colour (first or second), a box, corners only or
+- **Per group**: show or hide, which silhouette colour (the ESP's or the game's white), a box, corners only or
   no box, a colour for the box, names and lines (typed like `#ffb329`), a see-through fill, the
   name (the kind of guard or police, or the player's name), the distance, a health bar, a head
   dot, a line from the bottom, middle or top of the screen, a warning colour (a guard that is
@@ -507,11 +535,14 @@ your screen, also through walls. It is only on your own screen and works the sam
 - **Look**: line thickness, text size, how solid the fill is, the most targets shown at once
   (the nearest), and what to do with targets you can see directly: show, dim or hide them (so
   only the ones behind walls are marked).
-- **Silhouettes through walls**: the game's own outline effect (the one it uses for a guard that
-  spots you) around the bodies themselves: two colours (each group picks the first or the
-  second), the style (**Outline** around the body, or **Filled**: a thick band inside it, which
-  looks solid on people further away), thickness and brightness. While any silhouettes are on,
-  the game's own outlines take those colours too, and they are only in heist maps.
+- **Silhouettes through walls**: the game's own outline effect around the bodies themselves. It
+  has two colours: the game's white, which it uses for phones, keypads, locks and downed
+  teammates and which the ESP leaves alone, and a second one that becomes the ESP's colour (each
+  group picks the ESP's colour or white). Then the style (**Outline** around the body, or
+  **Filled**: a thick band inside it, which looks solid on people further away), thickness and
+  brightness. While any silhouettes are on, the game's red outline on someone spotting you takes
+  the ESP's colour, and thickness, brightness and style apply to the game's outlines too (the
+  defaults match the game's). Only in heist maps.
 - Every change is used at once and saved in `settings.lua`; **Reset ESP** goes back to the
   defaults, which are `V.Esp` in `config.lua`.
 - Dead and tied-up NPCs are not marked (the game stops their updates).
@@ -636,7 +667,7 @@ commandsharing 1
 |---|---|
 | `0` | Nothing (off). This is the setting after every game start. |
 | `1` | Player commands: `summon`, `spawn`, `summonstop`, `dupe`, `revive`, `noclip`, `god`, `ghost`, `fly`, `walk`, `teleport`, `destroytarget` |
-| `2` | Level 1 plus world commands: `destroyall`, `slomo`, `playersonly`, `changesize`, `doors`, `reviveall`, `healall`, `godall`, `alarm`, `cops`, `cameras`, `codes`, `bringloot`, `guards` |
+| `2` | Level 1 plus world commands: `destroyall`, `slomo`, `playersonly`, `changesize`, `doors`, `reviveall`, `healall`, `godall`, `alarm`, `cops`, `cameras`, `codes`, `bringloot`, `guards`, `civilians` |
 | `3` | Any console command except the block list below (guests use `host <command>` for commands the mod does not know) |
 
 `commandsharing` with no number shows the current level. Only the host's setting counts.
@@ -663,7 +694,7 @@ With more than that the game crashed at random, even at startup.
 
 - `summon` and `spawn` put things in front of the **guest**.
 - `god`, `ghost`, `walk`, `revive` and `noclip` act on the **guest's** character.
-- `destroytarget`, `dupe`, `teleport`, `doors` and `guards` act on what the **guest** is looking at: the
+- `destroytarget`, `dupe`, `teleport`, `doors`, `guards` and `civilians` act on what the **guest** is looking at: the
   guest's mod sends its exact camera position and angle, and the host's mod aims from there.
 - The heist commands (`alarm off`, `cops wave`, `bringloot`...) change the heist for everyone,
   the same as when the host types them.
@@ -822,24 +853,28 @@ in `summon` and in `selectmap`.
 
 ## Building
 
-The installer (needs Python 3 and the .NET SDK 6 or newer):
+The installers (needs Python 3 and the .NET SDK 6 or newer):
 
 ```
 python tools/make_payload.py
 cd installer
 dotnet build -c Release
+dotnet build -c Release -p:Edition=Online
 ```
 
 `make_payload.py` downloads the official UE4SS 3.0.1 zip once (checked against its SHA-256),
-lays `mod/` over it and writes `build/payload.zip`, which the installer embeds. The result is
-`dist/OAR-Commands-Installer.exe`.
+lays `mod/` over it and writes `build/payload.zip`, which the offline installer embeds, plus
+`dist/OAR-Commands-Payload.zip` and its `.sha256` for the online installer. The results are
+`dist/OAR-Commands-Offline-Installer.exe` and `dist/OAR-Commands-Online-Installer.exe` (the same
+code; the online edition carries no files). A release must include all four files in `dist`:
+the online installer looks for the zip and its checksum in the latest release.
 
 Tests:
 
 ```
 python tools/test_oarcommands.py      # the Lua mod against stubbed UE4SS functions (needs lupa)
-cd installer && dotnet build -c Debug && cd ..
-python tools/test_installer.py        # the installer against fake game folders
+cd installer && dotnet build -c Debug && dotnet build -c Debug -p:Edition=Online && cd ..
+python tools/test_installer.py        # both installers against fake game folders and a fake release
 ```
 
 ## Credits and license

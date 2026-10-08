@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace OARCommandsInstaller
@@ -25,7 +26,7 @@ namespace OARCommandsInstaller
         internal MainForm(string gameArg, string autoAction)
         {
             _autoAction = autoAction;
-            Text = "OAR Commands " + Program.Version + " installer";
+            Text = Payload.Online ? "OAR Commands online installer" : "OAR Commands " + Program.Version + " installer";
             StartPosition = FormStartPosition.CenterScreen;
             ClientSize = new Size(640, 360);
             MinimumSize = new Size(520, 300);
@@ -34,8 +35,11 @@ namespace OARCommandsInstaller
             var intro = new Label
             {
                 AutoSize = true, Dock = DockStyle.Fill, Padding = new Padding(0, 0, 0, 6),
-                Text = "Adds bind, summon <name> [count], dupe and a working console (~) to One-armed robber.\n" +
-                       "Installs UE4SS 3.0.1 and the OARCommands mod into the game folder.",
+                Text = "Adds the opengui menu, ESP, notarget, heist commands, summon, binds and a working console (~)\n" +
+                       "to One-armed robber. Installs UE4SS 3.0.1 and the OARCommands mod into the game folder.\n" +
+                       (Payload.Online
+                           ? "Install / Update downloads the newest version from GitHub every time, so this installer never gets old."
+                           : "This installer has version " + Program.Version + " built in and needs no internet."),
             };
             var folderRow = new TableLayoutPanel { ColumnCount = 3, Dock = DockStyle.Fill, AutoSize = true };
             folderRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -103,7 +107,7 @@ namespace OARCommandsInstaller
             }
         }
 
-        private void Run(string action)
+        private async void Run(string action)
         {
             if (_win64 == null) return;
             if (!ModInstaller.CanWrite(_win64))
@@ -124,8 +128,11 @@ namespace OARCommandsInstaller
             {
                 if (action == "install")
                 {
-                    ModInstaller.Install(_win64, Log);
-                    Log("Done. Start the game, press ~ and try:  bind x destroytarget   or   summon goldbar 5");
+                    ModInstaller.RefuseWhileRunning();          // before downloading anything
+                    byte[] downloaded = Payload.Online ? await Task.Run(() => Payload.Fetch(Log)) : null;
+                    using (Stream payload = Payload.Open(downloaded))
+                        ModInstaller.Install(_win64, Log, payload);
+                    Log("Done. Start the game, press ~ and type  opengui  (or  bind f1 opengui  to open the menu with F1)");
                 }
                 else
                 {
@@ -159,6 +166,15 @@ namespace OARCommandsInstaller
             }
         }
 
-        private void Log(string line) => _log.AppendText(line + Environment.NewLine);
+        // Also called from the download, which runs off the window's thread.
+        private void Log(string line)
+        {
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action<string>(Log), line);
+                return;
+            }
+            _log.AppendText(line + Environment.NewLine);
+        }
     }
 }
